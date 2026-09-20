@@ -1,221 +1,174 @@
 # Implementation Plan: Aitana Auth Architecture Proof-of-Concept (PoC)
 
-Implement a contract-first, zero-trust APIM boundary architecture Proof-of-Concept adhering to [POC-Implementation-guide.md](file:///home/afinana/development/projects/auth-spa-poc/POC-Implementation-guide.md). The system strictly decouples user identity verification (**Keycloak IdP**) from access policy enforcement (**Kong API Gateway PEP**), providing sanitized, anti-spoofing assertion headers to a downstream **Go microservice**, consumed by an **Angular SPA** with OAuth 2.0 PKCE flow.
+This implementation plan defines the complete specification for the **Aitana Auth Architecture Proof-of-Concept (PoC)**. Built around a contract-first, zero-trust APIM boundary architecture, the design strictly decouples user identity verification (AuthN) from perimeter access policy enforcement (AuthZ) and downstream business logic, supporting **Keycloak** and **ZITADEL** as Identity Providers, **KrakenD**, **Kong**, and **Tyk** as Policy Enforcement Point (PEP) gateways, a downstream **Go microservice**, and an **Angular 19 SPA** with OAuth 2.0 PKCE flow.
 
-## Architecture & Security Review Required
+---
+
+## 1. Architecture & Security Review Required
 
 > [!IMPORTANT]
 > **Token Offloading & Header Assertion Boundary**:
 >
-> 1. Inbound requests from the Angular SPA carry `Authorization: Bearer <JWT>` to Kong (`:8000`).
-> 2. Kong cryptographically verifies the JWT signature and expiration against Keycloak's public JWKS.
-> 3. Kong strips the external raw `Authorization` header and injects validated claims (`X-User-Username`, `X-User-Email`, `X-User-Role`) alongside mandatory anti-spoofing boundary assertions (`X-Gateway-Token: aitana-poc-gateway-secret-token`, `X-Enforcement-Point: Kong-APIM-Boundary`).
+> 1. Inbound requests from the Angular SPA carry `Authorization: Bearer <JWT>` to the PEP Gateway on port `:8000`.
+> 2. The gateway cryptographically verifies the JWT signature and expiration against the IdP's public keys.
+> 3. The gateway strips the external raw `Authorization` header and injects validated identity claims (`X-User-Username`, `X-User-Email`, `X-User-Role`) alongside mandatory anti-spoofing boundary assertions (`X-Gateway-Token: aitana-poc-gateway-secret-token`, `X-Enforcement-Point: <Gateway>-APIM-Boundary`).
 > 4. The Go microservice rejects any direct requests missing or mismatched on these gateway boundary headers with `403 Forbidden`, remaining completely agnostic to OAuth/JWT mechanics.
 
 > [!NOTE]
-> **CORS & Gateway Port Layout**:
+> **Port Layout Across Stacks**:
 >
-> - Keycloak IdP: `http://localhost:8081`
-> - Kong PEP Gateway: `http://localhost:8000` (Proxy), `http://localhost:8001` (Admin)
-> - Go Microservice: `http://localhost:8080` (Internal container `go-backend:8080`)
-> - Angular SPA: `http://localhost:4200`
-> Kong configuration will include CORS plugin rules for `http://localhost:4200` to allow preflight `OPTIONS` and headers.
+> - **Identity Provider (IdP)**: `http://localhost:8081` (Keycloak or ZITADEL OIDC adapter)
+> - **PEP Gateway**: `http://localhost:8000` (KrakenD, Kong, or Tyk)
+> - **Kong Admin API**: `http://localhost:8001` (Kong stack only)
+> - **Go Microservice**: `http://localhost:8080` (Direct container port `go-backend:8080`)
+> - **Angular 19 SPA**: `http://localhost:4200`
 
 ---
 
-## Proposed Changes
+## 2. Directory Structure & Components
 
-```
+```text
 auth-spa-poc/
-├── docker-compose.yml
+├── docker-compose.yml              # Complete environment orchestration (KrakenD API GW + Keycloak IdP)
+├── docker-compose.krakend.yml      # Explicit KrakenD stack compose file
+├── docker-compose.keycloak-kong.yml# Complete environment orchestration (Kong API GW + Keycloak IdP)
+├── docker-compose.tyk.yml          # Complete environment orchestration (Tyk API GW + Keycloak IdP)
+├── docker-compose.zitadel.yml      # Complete environment orchestration (Kong API GW + ZITADEL IdP)
+├── POC-Implementation-guide.md     # Master architectural guide and requirements
+├── Project-Implementation-plan.md  # Detailed implementation plan
+├── KONG-Implementation-Guide.md    # Kong gateway deep dive
+├── KRAKEND-Implementation-Guide.md # KrakenD gateway deep dive
+├── TYK-Implementation-Guide.md     # Tyk gateway deep dive
+├── ZITADEL-Implementation-Plan.md  # ZITADEL IdP integration plan
+├── README.md                       # Main documentation and access guide
 ├── keycloak/
-│   └── realm-export.json
+│   └── realm-export.json           # Declarative Keycloak realm export with RS256 keypair
+├── zitadel/
+│   ├── bootstrap/                  # Automated provisioning and Kong key sync
+│   └── steps.yaml                  # ZITADEL initialization configuration
+├── krakend/
+│   ├── README.md                   # KrakenD directory documentation
+│   ├── krakend.json                # Declarative configuration for Keycloak IdP
+│   └── krakend.zitadel.json        # Declarative configuration for ZITADEL IdP
 ├── kong/
-│   └── kong.yml
+│   ├── README.md                   # Kong directory documentation
+│   ├── kong.yml                    # Declarative configuration for Keycloak IdP
+│   └── kong.zitadel.yml            # Declarative configuration for ZITADEL IdP
+├── tyk/
+│   ├── README.md                   # Tyk directory documentation
+│   ├── tyk.conf                    # Declarative headless gateway configuration
+│   ├── apps/
+│   │   └── app-backend.json        # API definition with JWT & CORS
+│   ├── policies/
+│   │   └── policies.json           # Headless security policies
+│   └── middleware/
+│       └── auth-transform.js       # JS middleware for JWT claims & header injection
 ├── backend/
-│   ├── go.mod
-│   ├── main.go
-│   ├── main_test.go
-│   └── Dockerfile.backend
+│   ├── README.md                   # Backend architecture, zero-trust headers & RBAC guide
+│   ├── go.mod                      # Go module definition
+│   ├── main.go                     # Go microservice with zero-trust middleware & RBAC
+│   ├── main_test.go                # Unit test suite for boundary and authorization
+│   └── Dockerfile.backend          # Multi-stage minimal container build
 └── frontend/
-    ├── package.json
-    ├── angular.json
-    ├── tsconfig.json
-    ├── nginx.conf
-    ├── Dockerfile.frontend
+    ├── README.md                   # Frontend architecture, JWT claims & PKCE guide
+    ├── angular.json                # Angular CLI configuration
+    ├── package.json                # Angular dependencies (including angular-oauth2-oidc)
+    ├── nginx.conf                  # Nginx configuration with CSP and security headers
+    ├── Dockerfile.frontend         # Nginx production container
     └── src/
-        ├── index.html
-        ├── styles.css
-        ├── main.ts
+        ├── index.html              # HTML shell with meta tags and fonts
+        ├── styles.css              # Global styles, dark-mode theme, CSS variables
+        ├── main.ts                 # Bootstrap entrypoint
         └── app/
-            ├── app.config.ts
-            ├── app.component.ts
-            ├── auth.service.ts
-            └── auth.interceptor.ts
+            ├── app.config.ts       # Application providers & HTTP interceptors
+            ├── app.component.ts    # Main component with IdP combo selector & test suite
+            ├── app.component.html  # Responsive UI template with sequence flow & console
+            ├── app.component.css   # Glassmorphism, animations, and status pills
+            ├── auth.service.ts     # Multi-IdP PKCE service (Keycloak & ZITADEL)
+            ├── zitadel.service.ts  # ZITADEL-specific claim & role utilities
+            └── auth.interceptor.ts # Interceptor injecting Bearer tokens for API Gateway (:8000)
 ```
 
 ---
 
-### Component 1: Keycloak Realm Configuration (`keycloak/`)
+## 3. Implementation Components
 
-#### [NEW] [realm-export.json](file:///home/afinana/development/projects/auth-spa-poc/keycloak/realm-export.json)
+### Component 1: Identity Providers (Keycloak & ZITADEL)
 
-- Realm: `auth-realm`
-- Client: `angular-spa` (public client, PKCE enabled with S256 challenge, standard authorization code flow enabled, valid redirect URIs: `http://localhost:4200/*`, web origins: `http://localhost:4200`, `+`)
-- Fixed RSA Keypair (or exported active key) so Kong can deterministically verify tokens offline and online
-- Roles: `user`, `admin`
-- Pre-provisioned test accounts for instant PoC evaluation:
-  - `alice` (Password: `alice123`, Email: `alice@example.com`, Role: `user`)
-  - `bob` (Password: `bob123`, Email: `bob@example.com`, Role: `admin`)
-- Protocol mappers:
-  - `preferred_username` mapped to access token
-  - `email` mapped to access token
-  - `roles` / `realm_access.roles` mapped to access token
+* **Keycloak (`keycloak/realm-export.json`)**:
+  - Realm: `auth-realm`
+  - Client: `angular-spa` (public client, PKCE enabled with S256 challenge)
+  - Pre-provisioned accounts: `alice` (`alice123`, role: `user`), `bob` (`bob123`, role: `admin`, `user`)
+  - Protocol mappers: `preferred_username`, `email`, `roles` mapped into access token.
+* **ZITADEL (`zitadel/`)**:
+  - Nginx OIDC compatibility adapter exposing port `8081`
+  - Automated provisioning via `zitadel-bootstrap` container
+  - Demo accounts: `alice` (`Alice123!`), `bob` (`Bob1234!`).
 
 ---
 
-### Component 2: Kong API Gateway PEP Configuration (`kong/`)
+### Component 2: Interchangeable Policy Enforcement Points (PEPs)
 
-#### [NEW] [kong.yml](file:///home/afinana/development/projects/auth-spa-poc/kong/kong.yml)
-
-- Declarative `_format_version: "3.0"` configuration
-- Upstream service: `go-backend-service` -> `http://go-backend:8080`
-- Route: `backend-route` matching `/api`
-- Plugins:
-  - `cors`: configured for `origins: ["http://localhost:4200"]`, methods `GET, POST, OPTIONS`, headers `Authorization, Content-Type, Accept`
-  - `jwt`: verifies `exp` claim, matches consumer `jwt_secrets` key against Keycloak issuer `http://localhost:8081/realms/auth-realm` using Keycloak's public RSA key
-  - `post-function`: extracts claims (`preferred_username`, `email`, `roles`), injects headers (`X-User-Username`, `X-User-Email`, `X-User-Role`, `X-Gateway-Token`, `X-Enforcement-Point`), and strips `Authorization` header
+1. **KrakenD Gateway (`krakend/krakend.json`)**:
+   - Stateless Lura Go engine running on port `8000`
+   - `auth/validator` dynamically retrieving and caching Keycloak JWKS (`/certs`)
+   - `propagate_claims` forwarding `X-User-*` headers
+   - `modifier/martian` injecting `X-Gateway-Token` and `X-Enforcement-Point: KrakenD-APIM-Boundary`.
+2. **Kong Gateway (`kong/kong.yml`)**:
+   - DB-less OpenResty engine on ports `8000` (proxy) and `8001` (admin)
+   - `jwt` plugin verifying RS256 signature against Keycloak public key
+   - `post-function` Lua script extracting claims and injecting `X-Gateway-Token` and `X-Enforcement-Point: Kong-APIM-Boundary`.
+3. **Tyk Gateway (`tyk/`)**:
+   - Headless Go engine on port `8000` backed by Redis (`tyk-redis:6379`)
+   - File-based API definitions (`apps/app-backend.json`) and security policies (`policies/policies.json`)
+   - RS256 JWT validation using Base64 RSA public key
+   - JSVM middleware (`auth-transform.js`) injecting `X-Gateway-Token` and `X-Enforcement-Point: Tyk-APIM-Boundary`.
 
 ---
 
-### Component 3: Go Microservice (`backend/`)
-
-#### [NEW] [go.mod](file:///home/afinana/development/projects/auth-spa-poc/backend/go.mod)
-
-- Module `aitana-auth-poc/backend` with standard library Go 1.24/1.26
-
-#### [NEW] [main.go](file:///home/afinana/development/projects/auth-spa-poc/backend/main.go)
+### Component 3: Go Microservice Backend (`backend/`)
 
 - `AuthHeaderMiddleware`:
   - Validates `X-Gateway-Token == "aitana-poc-gateway-secret-token"`
-  - Validates `X-Enforcement-Point == "Kong-APIM-Boundary"`
+  - Validates `isValidEnforcementPoint(ep)` where `ep` is `Kong-APIM-Boundary`, `KrakenD-APIM-Boundary`, or `Tyk-APIM-Boundary`
   - Enforces presence of `X-User-Username` and `X-User-Email`
-  - Propagates `UserIdentity` struct into request context
-- `ProfileHandler`:
-  - Returns greeting and JSON payload containing username, email, role, and boundary assertion metadata
-- `AdminHandler`:
-  - Role-based authorization check: requires role containing `admin` (demonstrating AuthZ)
-- `HealthHandler`:
-  - Returns `200 OK` for container readiness
-- `main_test.go`:
-  - Tests 403 Forbidden when gateway boundary headers are absent
-  - Tests 401 Unauthorized when user context is missing
-  - Tests 200 OK when valid gateway boundary and user context are present
-  - Tests RBAC authorization on `/api/admin`
-
-#### [NEW] [Dockerfile.backend](file:///home/afinana/development/projects/auth-spa-poc/backend/Dockerfile.backend)
-
-- Multi-stage build producing a minimal scratch or alpine container exposing port 8080.
+  - Injects `UserIdentity` struct into request context.
+- Handlers:
+  - `ProfileHandler`: returns user identity and boundary metadata
+  - `AdminHandler`: enforces `admin` role check
+  - `HealthHandler`: returns `200 OK` liveness.
+- Test suite (`main_test.go`): verifies 403 when boundary headers are missing, 401 when user context is missing, 200 for valid calls across Kong, KrakenD, and Tyk, and 403/200 for RBAC checks.
 
 ---
 
 ### Component 4: Angular Frontend SPA (`frontend/`)
 
-#### [NEW] [package.json](file:///home/afinana/development/projects/auth-spa-poc/frontend/package.json), [angular.json](file:///home/afinana/development/projects/auth-spa-poc/frontend/angular.json), [tsconfig.json](file:///home/afinana/development/projects/auth-spa-poc/frontend/tsconfig.json)
-
-- Angular 19 application using standalone components and `angular-oauth2-oidc`
-
-#### [NEW] [src/app/auth.service.ts](file:///home/afinana/development/projects/auth-spa-poc/frontend/src/app/auth.service.ts)
-
-- Configures `OAuthService` with PKCE authorization code flow:
-  - Issuer: `http://localhost:8081/realms/auth-realm`
-  - Redirect URI: `http://localhost:4200/index.html`
-  - Client ID: `angular-spa`
-  - Response type: `code`
-  - Scope: `openid profile email roles`
-- Methods for login, logout, getting user claims, tokens, and session state
-
-#### [NEW] [src/app/auth.interceptor.ts](file:///home/afinana/development/projects/auth-spa-poc/frontend/src/app/auth.interceptor.ts)
-
-- Attaches `Bearer <token>` strictly to requests destined for Kong Gateway (`http://localhost:8000`)
-- Explicitly avoids attaching token to external or direct requests
-
-#### [NEW] [src/app/app.component.ts](file:///home/afinana/development/projects/auth-spa-poc/frontend/src/app/app.component.ts), [src/app/app.component.html](file:///home/afinana/development/projects/auth-spa-poc/frontend/src/app/app.component.html)
-
-- Rich UI with dark theme, glassmorphism cards, live APIM sequence flow diagram:
-  - User identity badge (Username, Email, Assigned Roles)
-  - Token details viewer with decoded JWT payload claims
-  - Action cards:
-    - **Login / Logout** (via Keycloak PKCE)
-    - **Call Gateway API (`GET :8000/api/profile`)**: proves token offloading, header transformation, and successful backend response
-    - **Test Direct Upstream Bypass (`GET :8080/api/profile`)**: demonstrates zero-trust boundary rejection (`403 Forbidden`)
-    - **Test Admin Endpoint (`GET :8000/api/admin`)**: demonstrates Role-Based Access Control (succeeds for `bob`, denies for `alice`)
-- Safe DOM handling (framework native bindings, no unescaped innerHTML, strict CSP compliant)
-
-#### [NEW] [nginx.conf](file:///home/afinana/development/projects/auth-spa-poc/frontend/nginx.conf), [Dockerfile.frontend](file:///home/afinana/development/projects/auth-spa-poc/frontend/Dockerfile.frontend)
-
-- Multi-stage Dockerfile: builds Angular app, serves with Nginx on port 80 with security headers (`X-Frame-Options`, `X-Content-Type-Options`, strict CSP).
+- Standalone Angular 19 client with PKCE authentication (`auth.service.ts`)
+- IdP switcher dropdown in the navbar supporting Keycloak and ZITADEL
+- Automatic Bearer token injection to `:8000` via `auth.interceptor.ts`
+- Live APIM sequence flow visualization and test console
+- Direct microservice bypass test button proving zero-trust rejection (`403 Forbidden`).
 
 ---
 
-### Component 5: Docker Compose Orchestration (`docker-compose.yml`)
-
-#### [NEW] [docker-compose.yml](file:///home/afinana/development/projects/auth-spa-poc/docker-compose.yml)
-
-- Services:
-  - `postgres`: PostgreSQL 16 Alpine for Keycloak persistent store
-  - `keycloak`: Keycloak 24.0 with `start-dev --import-realm` mounting `./keycloak/realm-export.json` on port 8081
-  - `go-backend`: Go microservice building `./backend/Dockerfile.backend` on port 8080
-  - `kong`: Kong 3.6 Alpine in DB-less mode mounting `./kong/kong.yml` on port 8000 (proxy) and 8001 (admin)
-  - `frontend`: Angular SPA building `./frontend/Dockerfile.frontend` on port 4200
-- Custom bridge network `auth-net`
-
----
-
-## Verification Plan
-
-### Automated Security Check
-
-- **Security Scanner**: Run scan on newly created source files using `run_security_scanner` skill (if scanner backend is configured).
-- **Security Audit**: Audit code against `mandatory-secure-web-skills` (XSS prevention, no tokens in localStorage, CSRF defense, anti-spoofing header verification, strict method allow-lists, secure cookies). Document results in `walkthrough.md`.
+## 4. Verification & Testing
 
 ### Automated Go Backend Tests
-
 ```bash
 cd backend && go test -v ./...
 ```
 
-- Validate rejection of requests missing `X-Gateway-Token` and `X-Enforcement-Point` (HTTP 403)
-- Validate rejection of requests missing user identity headers (HTTP 401)
-- Validate successful profile resolution with valid boundary headers (HTTP 200)
-- Validate RBAC enforcement on `/api/admin` (HTTP 200 for admin role, HTTP 403 for user role)
-
-### Automated Integration Verification
-
+### Docker Compose Stack Launch
 ```bash
-# 1. Start all containers
-docker compose up -d --build
+# KrakenD (Default)
+docker compose up -d
 
-# 2. Check container health status
-docker compose ps
+# Kong
+docker compose -f docker-compose.keycloak-kong.yml up -d
 
-# 3. Test direct microservice bypass (Expect HTTP 403 Forbidden)
-curl -i http://localhost:8080/api/profile
+# Tyk
+docker compose -f docker-compose.tyk.yml up -d
 
-# 4. Test unauthenticated Kong gateway call (Expect HTTP 401 Unauthorized)
-curl -i http://localhost:8000/api/profile
-
-# 5. Acquire token via Keycloak password grant or PKCE test script and call Kong gateway (Expect HTTP 200 with user profile)
-# 6. Verify role-based authorization for user vs admin accounts
+# ZITADEL
+docker compose -f docker-compose.zitadel.yml up -d
 ```
-
-### End-to-End Browser Flow Verification
-
-- Using the `browser_subagent` tool:
-  - Open `http://localhost:4200`
-  - Click "Login with Keycloak" -> Verify redirection to Keycloak login page
-  - Login as `alice` (`alice123`) -> Verify redirect back to Angular SPA with valid PKCE exchange
-  - Click "Call Gateway API" -> Verify HTTP 200 response with `alice (alice@example.com) [Role: user]`
-  - Click "Test Direct Bypass" -> Verify HTTP 403 rejection message displayed in UI
-  - Click "Test Admin Endpoint" -> Verify HTTP 403 Forbidden (insufficient permissions)
-  - Logout and log in as `bob` (`bob123`) -> Test Admin Endpoint -> Verify HTTP 200 Success!

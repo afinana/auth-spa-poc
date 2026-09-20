@@ -8,7 +8,7 @@ This guide provides a comprehensive technical specification of **Kong Gateway (v
 
 Kong operates at the perimeter of the architecture, sitting between the public client (Angular SPA on port `4200`) and the private internal microservices (Go backend on port `8080`).
 
-```
+```text
 +------------------------------------+
 |     Angular SPA Frontend (:4200)   |
 +------------------------------------+
@@ -82,7 +82,9 @@ services:
 ### 2.3 Plugin Chain & Execution Sequence
 
 #### Plugin 1: CORS (`cors`)
+
 Configured to handle browser preflight `OPTIONS` requests before authentication:
+
 ```yaml
 - name: cors
   config:
@@ -106,7 +108,9 @@ Configured to handle browser preflight `OPTIONS` requests before authentication:
 ```
 
 #### Plugin 2: JWT Verification (`jwt`)
+
 Enforces cryptographic integrity:
+
 ```yaml
 - name: jwt
   config:
@@ -114,11 +118,14 @@ Enforces cryptographic integrity:
       - exp
     run_on_preflight: false
 ```
+
 * **`claims_to_verify: [exp]`**: Rejects expired tokens with `401 Unauthorized`.
 * **`run_on_preflight: false`**: Ensures CORS preflights pass through to the `cors` plugin without requiring a JWT.
 
 #### Plugin 3: Post-Function Lua Script (`post-function`)
+
 Executes custom Lua code in the `access` phase to extract token claims and construct zero-trust boundary headers:
+
 ```yaml
 - name: post-function
   config:
@@ -153,6 +160,7 @@ Executes custom Lua code in the `access` phase to extract token claims and const
 ## 3. Operational Guide
 
 ### 3.1 Docker Compose Deployment
+
 Kong is orchestrated via `docker-compose.keycloak-kong.yml`:
 
 ```bash
@@ -164,13 +172,16 @@ docker compose -f docker-compose.keycloak-kong.yml ps
 ```
 
 ### 3.2 Port Allocations
+
 | Port | Interface | Protocol | Description |
 |---|---|---|---|
 | `8000` | `0.0.0.0` | HTTP | Client traffic / API proxy entrypoint |
 | `8001` | `0.0.0.0` | HTTP | Admin API (Declarative configuration status) |
 
 ### 3.3 Validating Declarative Configuration
+
 Check the status of loaded declarative configurations via the Kong Admin API:
+
 ```bash
 curl http://localhost:8001/status
 curl http://localhost:8001/routes
@@ -180,6 +191,7 @@ curl http://localhost:8001/plugins
 ### 3.4 Verification Tests
 
 #### Test 1: Missing Token (Expected 401)
+
 ```bash
 curl -i http://localhost:8000/api/profile
 # Expected: HTTP/1.1 401 Unauthorized
@@ -187,6 +199,7 @@ curl -i http://localhost:8000/api/profile
 ```
 
 #### Test 2: CORS Preflight (Expected 200/204)
+
 ```bash
 curl -i -X OPTIONS http://localhost:8000/api/profile \
   -H "Origin: http://localhost:4200" \
@@ -196,6 +209,7 @@ curl -i -X OPTIONS http://localhost:8000/api/profile \
 ```
 
 #### Test 3: Authenticated Request
+
 ```bash
 TOKEN="<JWT_FROM_KEYCLOAK>"
 curl -i http://localhost:8000/api/profile -H "Authorization: Bearer $TOKEN"

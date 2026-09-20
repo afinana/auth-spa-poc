@@ -8,7 +8,7 @@ This guide provides a comprehensive technical specification of **KrakenD Gateway
 
 KrakenD is a stateless, high-throughput, Go-based API gateway. Unlike traditional gateways that rely on external databases or Lua scripting runtimes, KrakenD processes requests via compiled Go pipeline components.
 
-```
+```text
 +------------------------------------+
 |     Angular SPA Frontend (:4200)   |
 +------------------------------------+
@@ -45,6 +45,7 @@ KrakenD is a stateless, high-throughput, Go-based API gateway. Unlike traditiona
 KrakenD's behavior is fully configured via `krakend/krakend.json`.
 
 ### 2.1 Global Configuration & CORS
+
 ```json
 {
   "version": 3,
@@ -72,6 +73,7 @@ KrakenD's behavior is fully configured via `krakend/krakend.json`.
   }
 }
 ```
+
 * **CORS at Gateway Edge:** All browser preflights are handled directly by the gateway without forwarding `OPTIONS` requests to downstream services.
 
 ### 2.2 Endpoint Definition: Token Validation & Claim Propagation
@@ -155,6 +157,7 @@ KrakenD uses Google's Martian library (`modifier/martian`) to inject zero-trust 
 ## 3. Operational Guide
 
 ### 3.1 Docker Compose Deployment
+
 KrakenD is orchestrated via `docker-compose.krakend.yml` (or the default `docker-compose.yml`):
 
 ```bash
@@ -166,6 +169,7 @@ docker compose -f docker-compose.krakend.yml ps
 ```
 
 ### 3.2 Port Allocations
+
 | Port | Interface | Protocol | Description |
 |---|---|---|---|
 | `8000` | `0.0.0.0` | HTTP | Client traffic / API proxy entrypoint |
@@ -173,12 +177,14 @@ docker compose -f docker-compose.krakend.yml ps
 ### 3.3 Verification Tests
 
 #### Test 1: Missing Token (Expected 401)
+
 ```bash
 curl -i http://localhost:8000/api/profile
 # Expected: HTTP/1.1 401 Unauthorized
 ```
 
 #### Test 2: CORS Preflight (Expected 200)
+
 ```bash
 curl -i -X OPTIONS http://localhost:8000/api/profile \
   -H "Origin: http://localhost:4200" \
@@ -188,6 +194,7 @@ curl -i -X OPTIONS http://localhost:8000/api/profile \
 ```
 
 #### Test 3: Authenticated Request
+
 ```bash
 TOKEN="<JWT_FROM_KEYCLOAK>"
 curl -i http://localhost:8000/api/profile -H "Authorization: Bearer $TOKEN"
