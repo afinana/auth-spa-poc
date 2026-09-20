@@ -1,0 +1,150 @@
+{
+  "$schema": "https://www.krakend.io/schema/v2.7/krakend.json",
+  "version": 3,
+  "name": "Aitana API Gateway (KrakenD - ZITADEL)",
+  "port": 8000,
+  "timeout": "3000ms",
+  "cache_ttl": "300s",
+  "extra_config": {
+    "security/cors": {
+      "allow_origins": [
+        "http://localhost:4200"
+      ],
+      "allow_methods": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS",
+        "HEAD"
+      ],
+      "allow_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "X-Requested-With"
+      ],
+      "expose_headers": [
+        "Content-Length",
+        "Content-Type"
+      ],
+      "max_age": "12h",
+      "allow_credentials": true
+    }
+  },
+  "endpoints": [
+    {
+      "endpoint": "/api/profile",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_headers": [
+        "X-User-Username",
+        "X-User-Email",
+        "X-User-Role"
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://zitadel:8080/oauth/v2/keys",
+          "disable_jwk_security": true,
+          "cache": true,
+          "propagate_claims": [
+            ["preferred_username", "X-User-Username"],
+            ["email", "X-User-Email"],
+            ["urn:zitadel:iam:org:project:roles", "X-User-Role"]
+          ]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/profile",
+          "encoding": "no-op",
+          "host": [
+            "http://go-backend:8080"
+          ],
+          "extra_config": {
+            "modifier/martian": {
+              "fifo.Group": {
+                "scope": ["request"],
+                "aggregateErrors": true,
+                "modifiers": [
+                  {
+                    "header.Modifier": {
+                      "scope": ["request"],
+                      "name": "X-Gateway-Token",
+                      "value": "aitana-poc-gateway-secret-token"
+                    }
+                  },
+                  {
+                    "header.Modifier": {
+                      "scope": ["request"],
+                      "name": "X-Enforcement-Point",
+                      "value": "KrakenD-APIM-Boundary"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/admin",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_headers": [
+        "X-User-Username",
+        "X-User-Email",
+        "X-User-Role"
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://zitadel:8080/oauth/v2/keys",
+          "disable_jwk_security": true,
+          "cache": true,
+          "propagate_claims": [
+            ["preferred_username", "X-User-Username"],
+            ["email", "X-User-Email"],
+            ["urn:zitadel:iam:org:project:roles", "X-User-Role"]
+          ]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/admin",
+          "encoding": "no-op",
+          "host": [
+            "http://go-backend:8080"
+          ],
+          "extra_config": {
+            "modifier/martian": {
+              "fifo.Group": {
+                "scope": ["request"],
+                "aggregateErrors": true,
+                "modifiers": [
+                  {
+                    "header.Modifier": {
+                      "scope": ["request"],
+                      "name": "X-Gateway-Token",
+                      "value": "aitana-poc-gateway-secret-token"
+                    }
+                  },
+                  {
+                    "header.Modifier": {
+                      "scope": ["request"],
+                      "name": "X-Enforcement-Point",
+                      "value": "KrakenD-APIM-Boundary"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
