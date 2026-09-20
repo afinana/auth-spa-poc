@@ -16,9 +16,16 @@ type userContextKey string
 const userCtxKey userContextKey = "user_identity"
 
 const (
-	ExpectedGatewayToken     = "aitana-poc-gateway-secret-token"
-	ExpectedEnforcementPoint = "Kong-APIM-Boundary"
+	ExpectedGatewayToken           = "aitana-poc-gateway-secret-token"
+	ExpectedEnforcementPointKong   = "Kong-APIM-Boundary"
+	ExpectedEnforcementPointKraken = "KrakenD-APIM-Boundary"
+	ExpectedEnforcementPoint       = ExpectedEnforcementPointKong
 )
+
+func isValidEnforcementPoint(ep string) bool {
+	return ep == ExpectedEnforcementPointKong || ep == ExpectedEnforcementPointKraken
+}
+
 
 type UserIdentity struct {
 	Username         string `json:"username"`
@@ -60,7 +67,7 @@ func AuthHeaderMiddleware(next http.Handler) http.Handler {
 		enforcementPoint := r.Header.Get("X-Enforcement-Point")
 
 		// Validate mandatory anti-spoofing gateway headers
-		if gatewayToken != ExpectedGatewayToken || enforcementPoint != ExpectedEnforcementPoint {
+		if gatewayToken != ExpectedGatewayToken || !isValidEnforcementPoint(enforcementPoint) {
 			log.Printf("[SECURITY] Rejected request from %s: invalid gateway headers (token=%q, enforcement=%q)",
 				r.RemoteAddr, gatewayToken, enforcementPoint)
 			http.Error(w, "Forbidden: Untrusted gateway boundary", http.StatusForbidden)

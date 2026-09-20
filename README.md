@@ -78,15 +78,17 @@ Manage organizations, projects, applications, and users at [http://localhost:808
 | **Project** | **`auth-spa-poc`** | Application project containing roles and OIDC client |
 | **Client ID** | `391627259401797638` | Native ZITADEL OIDC Public Client |
 
-### 2.4 Kong API Gateway & Boundary Tokens
+### 2.4 API Gateways (KrakenD & Kong PEP) & Boundary Tokens
 
 | Parameter | Setting / Value | Description |
 |---|---|---|
-| **Proxy Endpoint** | `http://localhost:8000` | Gateway entrypoint for API calls |
-| **Admin API** | `http://localhost:8001` | Declarative configuration and status endpoint |
-| **Kong Consumer** | `aitana-client` | Consumer associated with IdP JWT public keys |
+| **KrakenD Proxy Endpoint** | `http://localhost:8000` | KrakenD gateway entrypoint for API calls |
+| **Kong Proxy Endpoint** | `http://localhost:8000` | Kong gateway entrypoint for API calls |
+| **Kong Admin API** | `http://localhost:8001` | Declarative configuration and status endpoint (Kong stack) |
 | **Boundary Gateway Secret** | `aitana-poc-gateway-secret-token` | Injected as `X-Gateway-Token`, validated by Go microservice |
-| **Boundary Enforcement Point**| `Kong-APIM-Boundary` | Injected as `X-Enforcement-Point`, validated by Go microservice |
+| **KrakenD Enforcement Point**| `KrakenD-APIM-Boundary` | Injected as `X-Enforcement-Point` by KrakenD, validated by Go microservice |
+| **Kong Enforcement Point** | `Kong-APIM-Boundary` | Injected as `X-Enforcement-Point` by Kong, validated by Go microservice |
+
 
 ### 2.5 Database Persistence
 
@@ -108,10 +110,12 @@ For in-depth specifications, architectural internals, and module-specific guides
 
 ## 4. Project Directory Structure
 
-```
+```text
 auth-spa-poc/
-├── docker-compose.yml              # Complete environment orchestration (Keycloak stack)
-├── docker-compose.zitadel.yml      # Complete environment orchestration (ZITADEL stack)
+├── docker-compose.yml              # Complete environment orchestration (KrakenD API GW + Keycloak IdP)
+├── docker-compose.krakend.yml      # Explicit KrakenD stack compose file
+├── docker-compose.keycloak-kong.yml# Complete environment orchestration (Kong API GW + Keycloak IdP)
+├── docker-compose.zitadel.yml      # Complete environment orchestration (Kong API GW + ZITADEL IdP)
 ├── POC-Implementation-guide.md     # Architectural guide and requirements
 ├── Project-Implementation-plan.md  # Detailed implementation specification
 ├── README.md                       # Documentation, credentials, and user guide
@@ -120,9 +124,12 @@ auth-spa-poc/
 ├── zitadel/
 │   ├── bootstrap/                  # Automated provisioning and Kong key sync
 │   └── steps.yaml                  # ZITADEL initialization configuration
+├── krakend/
+│   ├── krakend.json                # Declarative configuration for Keycloak IdP
+│   └── krakend.zitadel.json        # Declarative configuration for ZITADEL IdP
 ├── kong/
-│   ├── kong.yml                    # Declarative configuration for Keycloak
-│   └── kong.zitadel.yml            # Declarative configuration for ZITADEL
+│   ├── kong.yml                    # Declarative configuration for Keycloak IdP
+│   └── kong.zitadel.yml            # Declarative configuration for ZITADEL IdP
 ├── backend/
 │   ├── README.md                   # 📖 Backend architecture, zero-trust headers & RBAC guide
 │   ├── go.mod                      # Go module definition
@@ -146,7 +153,7 @@ auth-spa-poc/
             ├── app.component.css   # Glassmorphism, animations, and status pills
             ├── auth.service.ts     # Multi-IdP PKCE service (Keycloak & ZITADEL)
             ├── zitadel.service.ts  # ZITADEL-specific claim & role utilities
-            └── auth.interceptor.ts # Interceptor injecting Bearer tokens solely for Kong
+            └── auth.interceptor.ts # Interceptor injecting Bearer tokens for API Gateway (:8000)
 ```
 
 ---
@@ -154,16 +161,19 @@ auth-spa-poc/
 ## 5. Quick Start & Execution
 
 ### 5.1 Prerequisites
+
 - Docker & Docker Compose (v2 or higher)
 - Go (optional, for local testing: v1.24+)
 - Node.js & npm (optional, for local frontend development: v20+)
 
-### 5.2 Starting the Stack (Keycloak IdP)
+### 5.2 Starting the KrakenD Stack (Default: Keycloak IdP + KrakenD Gateway)
 
-To run the PoC with the Keycloak Identity Provider:
+To run the PoC with the **KrakenD API Gateway** and **Keycloak Identity Provider**:
 
 ```bash
 docker compose up -d
+# or explicitly:
+# docker compose -f docker-compose.krakend.yml up -d
 ```
 
 Verify that all containers are running:
@@ -174,19 +184,46 @@ docker compose ps
 
 You should see:
 - `angular-frontend` (`:4200`)
-- `kong` (`:8000`, `:8001`)
+- `krakend` (`:8000`)
 - `go-backend` (`:8080`)
 - `keycloak` (`:8081`)
 - `postgres` (`:5432`)
 
 To stop: `docker compose down`
 
-### 5.3 Starting the Stack (ZITADEL IdP)
+### 5.3 Starting the Keycloak + Kong Stack
 
-To run the PoC with the ZITADEL Identity Provider (directly exposed on `:8081`, without adapters):
+To run the PoC with the **Kong API Gateway** and **Keycloak Identity Provider**:
 
 ```bash
-# 1. Ensure Keycloak stack is stopped
+# 1. Stop current stack if running
+docker compose down
+
+# 2. Launch Keycloak + Kong stack
+docker compose -f docker-compose.keycloak-kong.yml up -d
+```
+
+Verify that all containers are running:
+
+```bash
+docker compose -f docker-compose.keycloak-kong.yml ps
+```
+
+You should see:
+- `angular-frontend` (`:4200`)
+- `kong` (`:8000`, `:8001`)
+- `go-backend` (`:8080`)
+- `keycloak` (`:8081`)
+- `postgres` (`:5432`)
+
+To stop: `docker compose -f docker-compose.keycloak-kong.yml down`
+
+### 5.4 Starting the ZITADEL + Kong Stack
+
+To run the PoC with the **ZITADEL Identity Provider** and **Kong API Gateway**:
+
+```bash
+# 1. Ensure other stacks are stopped
 docker compose down
 
 # 2. Launch the ZITADEL stack
