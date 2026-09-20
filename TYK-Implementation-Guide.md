@@ -8,7 +8,7 @@ This guide provides a comprehensive technical specification of **Tyk Gateway (v5
 
 Tyk Gateway operates in **headless mode** without requiring the Tyk Dashboard or commercial license. It uses a lightweight Redis instance (`tyk-redis:6379`) for key storage, rate limiting, and session tracking, and runs file-based declarative API definitions and policies.
 
-```
+```text
 +------------------------------------+
 |     Angular SPA Frontend (:4200)   |
 +------------------------------------+
@@ -247,6 +247,7 @@ authTransformMiddleware.NewProcessRequest(function(request, session) {
 ## 3. Operational Guide
 
 ### 3.1 Docker Compose Deployment
+
 Tyk is orchestrated via `docker-compose.tyk.yml`:
 
 ```bash
@@ -258,12 +259,14 @@ docker compose -f docker-compose.tyk.yml ps
 ```
 
 ### 3.2 Port Allocations
+
 | Port | Interface | Protocol | Description |
 |---|---|---|---|
 | `8000` | `0.0.0.0` | HTTP | Client traffic / API proxy entrypoint |
 | `6379` | Internal | TCP | Tyk Redis storage service (`tyk-redis`) |
 
 ### 3.3 Gateway Health & Hello Check
+
 ```bash
 curl http://localhost:8000/hello
 # Expected:
@@ -273,6 +276,7 @@ curl http://localhost:8000/hello
 ### 3.4 Verification Tests
 
 #### Test 1: Missing Token (Expected 401)
+
 ```bash
 curl -i http://localhost:8000/api/profile
 # Expected: HTTP/1.1 401 Unauthorized
@@ -280,6 +284,7 @@ curl -i http://localhost:8000/api/profile
 ```
 
 #### Test 2: CORS Preflight (Expected 200)
+
 ```bash
 curl -i -X OPTIONS http://localhost:8000/api/profile \
   -H "Origin: http://localhost:4200" \
@@ -289,6 +294,7 @@ curl -i -X OPTIONS http://localhost:8000/api/profile \
 ```
 
 #### Test 3: Authenticated Request
+
 ```bash
 TOKEN="<JWT_FROM_KEYCLOAK>"
 curl -i http://localhost:8000/api/profile -H "Authorization: Bearer $TOKEN"
