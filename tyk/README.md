@@ -49,5 +49,4 @@ docker compose -f docker-compose.tyk.yml down
 
 For full architectural deep dives, JSVM internals, and testing procedures, refer to:
 
-👉 **[Tyk Implementation Guide](../TYK-Implementation-Guide.md)**
-
+👉 **[Tyk Implementation Guide](../docs/TYK-Implementation-Guide.md)**

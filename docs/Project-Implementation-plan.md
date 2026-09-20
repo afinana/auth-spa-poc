@@ -34,13 +34,15 @@ auth-spa-poc/
 ├── docker-compose.keycloak-kong.yml# Complete environment orchestration (Kong API GW + Keycloak IdP)
 ├── docker-compose.tyk.yml          # Complete environment orchestration (Tyk API GW + Keycloak IdP)
 ├── docker-compose.zitadel.yml      # Complete environment orchestration (Kong API GW + ZITADEL IdP)
-├── POC-Implementation-guide.md     # Master architectural guide and requirements
-├── Project-Implementation-plan.md  # Detailed implementation plan
-├── KONG-Implementation-Guide.md    # Kong gateway deep dive
-├── KRAKEND-Implementation-Guide.md # KrakenD gateway deep dive
-├── TYK-Implementation-Guide.md     # Tyk gateway deep dive
-├── ZITADEL-Implementation-Plan.md  # ZITADEL IdP integration plan
 ├── README.md                       # Main documentation and access guide
+├── docs/                           # Centralized documentation and implementation guides
+│   ├── README.md                   # Documentation index & reading paths
+│   ├── POC-Implementation-guide.md # Master architectural guide and requirements
+│   ├── Project-Implementation-plan.md # Detailed implementation plan
+│   ├── KONG-Implementation-Guide.md # Kong gateway deep dive
+│   ├── KRAKEND-Implementation-Guide.md # KrakenD gateway deep dive
+│   ├── TYK-Implementation-Guide.md # Tyk gateway deep dive
+│   └── ZITADEL-Implementation-Plan.md # ZITADEL IdP integration plan
 ├── keycloak/
 │   └── realm-export.json           # Declarative Keycloak realm export with RS256 keypair
 ├── zitadel/

@@ -134,13 +134,17 @@ Manage organizations, projects, applications, and users at [http://localhost:808
 For in-depth specifications, architectural internals, gateway comparison, and module-specific guides, refer to:
 
 ### 3.1 Gateway PEP Deep Dives
-- 🦍 **[Kong Implementation Guide](KONG-Implementation-Guide.md)**: Declarative DB-less setup, JWT plugin, Lua claim transformation (`post-function`), anti-spoofing injection, and Kong Admin API.
-- 🐙 **[KrakenD Implementation Guide](KRAKEND-Implementation-Guide.md)**: Stateless Lura Go engine, dynamic JWKS caching (`auth/validator`), Martian request modifiers, and ultra-high-throughput routing.
-- 🛡️ **[Tyk Implementation Guide](TYK-Implementation-Guide.md)**: Headless open-source setup, Redis session storage, RS256 JWT validation, and JavaScript Virtual Machine (JSVM) middleware.
+
+- 🦍 **[Kong Implementation Guide](docs/KONG-Implementation-Guide.md)**: Declarative DB-less setup, JWT plugin, Lua claim transformation (`post-function`), anti-spoofing injection, and Kong Admin API.
+- 🐙 **[KrakenD Implementation Guide](docs/KRAKEND-Implementation-Guide.md)**: Stateless Lura Go engine, dynamic JWKS caching (`auth/validator`), Martian request modifiers, and ultra-high-throughput routing.
+- 🛡️ **[Tyk Implementation Guide](docs/TYK-Implementation-Guide.md)**: Headless open-source setup, Redis session storage, RS256 JWT validation, and JavaScript Virtual Machine (JSVM) middleware.
 
 ### 3.2 System Architecture & Component Guides
-- 📖 **[PoC Master Architecture Guide](POC-Implementation-guide.md)**: Contract-first zero-trust APIM boundary principles, comparative gateway evaluation matrix, network isolation, and PKCE flow.
-- 🔐 **[ZITADEL Implementation Plan](ZITADEL-Implementation-Plan.md)**: Dual-IdP integration plan detailing Keycloak and ZITADEL compatibility.
+
+- 📚 **[Documentation Index](docs/README.md)**: Centralized guide directory, comparative gateway/IdP matrix, and reading pathways.
+- 📖 **[PoC Master Architecture Guide](docs/POC-Implementation-guide.md)**: Contract-first zero-trust APIM boundary principles, comparative gateway evaluation matrix, network isolation, and PKCE flow.
+- 📋 **[Project Implementation Plan](docs/Project-Implementation-plan.md)**: Multi-phase delivery plan, zero-trust boundary specifications, and verification milestones.
+- 🔐 **[ZITADEL Implementation Plan](docs/ZITADEL-Implementation-Plan.md)**: Dual-IdP integration plan detailing Keycloak and ZITADEL compatibility.
 - 🖥️ **[Frontend Application (Angular 19)](frontend/README.md)**: Dual-IdP support, OAuth 2.0 Authorization Code Flow with PKCE, client-side JWT claims parsing, and `AuthInterceptor`.
 - ⚙️ **[Backend Microservice (Go)](backend/README.md)**: Zero-Trust boundary verification (`X-Gateway-Token`, `X-Enforcement-Point`), identity context extraction, RBAC enforcement (`/api/admin`), and unit test suite.
 
@@ -155,12 +159,15 @@ auth-spa-poc/
 ├── docker-compose.keycloak-kong.yml# Complete environment orchestration (Kong API GW + Keycloak IdP)
 ├── docker-compose.tyk.yml          # Complete environment orchestration (Tyk API GW + Keycloak IdP)
 ├── docker-compose.zitadel.yml      # Complete environment orchestration (Kong API GW + ZITADEL IdP)
-├── POC-Implementation-guide.md     # Master architectural guide and requirements
-├── Project-Implementation-plan.md  # Detailed implementation plan
-├── KONG-Implementation-Guide.md    # Kong gateway deep dive
-├── KRAKEND-Implementation-Guide.md # KrakenD gateway deep dive
-├── TYK-Implementation-Guide.md     # Tyk gateway deep dive
-├── ZITADEL-Implementation-Plan.md  # ZITADEL IdP integration plan
+├── README.md                       # Main documentation and access guide
+├── docs/                           # Centralized documentation and implementation guides
+│   ├── README.md                   # Documentation index & reading paths
+│   ├── POC-Implementation-guide.md # Master architectural guide and requirements
+│   ├── Project-Implementation-plan.md # Detailed implementation plan
+│   ├── KONG-Implementation-Guide.md # Kong gateway deep dive
+│   ├── KRAKEND-Implementation-Guide.md # KrakenD gateway deep dive
+│   ├── TYK-Implementation-Guide.md # Tyk gateway deep dive
+│   └── ZITADEL-Implementation-Plan.md # ZITADEL IdP integration plan
 ├── README.md                       # Main documentation and access guide
 ├── keycloak/
 │   └── realm-export.json           # Declarative Keycloak realm export with RS256 keypair
