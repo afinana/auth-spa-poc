@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpErrorResponse, HttpHeaders, HttpResponse } from '@angular/common/http';
-import { AuthService, DecodedClaims } from './auth.service';
+import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpErrorResponse, HttpResponse } from '@angular/common/http';
+import { AuthService, DecodedClaims, IdpType, IDP_CONFIGS } from './auth.service';
+import { ZitadelService } from './zitadel.service';
 
 interface ApiResult {
   endpoint: string;
@@ -17,7 +19,7 @@ interface ApiResult {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
@@ -32,12 +34,22 @@ export class AppComponent implements OnInit {
   public activeTab: 'overview' | 'claims' | 'response' = 'overview';
   public lastResult: ApiResult | null = null;
 
+  public selectedIdp: IdpType = 'keycloak';
+  public idpConfigs = IDP_CONFIGS;
+
   constructor(
     public authService: AuthService,
+    public zitadelService: ZitadelService,
     private http: HttpClient
   ) {}
 
   ngOnInit(): void {
+    this.selectedIdp = this.authService.getSelectedIdp();
+
+    this.authService.selectedIdp$.subscribe(idp => {
+      this.selectedIdp = idp;
+    });
+
     this.authService.isAuthenticated$.subscribe(isAuth => {
       this.isAuthenticated = isAuth;
       if (isAuth) {
@@ -50,6 +62,12 @@ export class AppComponent implements OnInit {
         this.rawToken = '';
       }
     });
+  }
+
+  public onIdpChange(newIdp: IdpType): void {
+    this.selectedIdp = newIdp;
+    this.authService.setIdp(newIdp);
+    this.lastResult = null;
   }
 
   public login(): void {

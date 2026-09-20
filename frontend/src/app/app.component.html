@@ -15,9 +15,29 @@
     </div>
 
     <div class="header-actions">
+      <!-- IDP Selector Combo -->
+      <div class="idp-selector-wrapper">
+        <label for="idp-select" class="idp-label">
+          <span class="idp-label-dot"></span>
+          IdP Provider:
+        </label>
+        <div class="select-container">
+          <select
+            id="idp-select"
+            class="idp-select-input"
+            [ngModel]="selectedIdp"
+            (ngModelChange)="onIdpChange($event)"
+            [disabled]="loading"
+          >
+            <option value="keycloak">Keycloak IdP (OAuth 2.0 PKCE)</option>
+            <option value="zitadel">ZITADEL IdP (Native OIDC)</option>
+          </select>
+        </div>
+      </div>
+
       <div class="system-status">
         <span class="status-pill status-online">
-          <span class="dot"></span> Keycloak IdP (:8081)
+          <span class="dot"></span> {{ idpConfigs[selectedIdp].name }} (:8081)
         </span>
         <span class="status-pill status-online">
           <span class="dot"></span> Kong PEP (:8000)
@@ -34,7 +54,7 @@
             <polyline points="10 17 15 12 10 7"/>
             <line x1="15" y1="12" x2="3" y2="12"/>
           </svg>
-          Login with Keycloak
+          Login with {{ idpConfigs[selectedIdp].name }}
         </button>
       </div>
 
@@ -57,22 +77,22 @@
   <section class="card flow-card">
     <div class="card-header">
       <h2 class="card-title">Perimeter APIM & Token Offloading Architecture</h2>
-      <span class="badge badge-purple">Zero-Trust Active</span>
+      <span class="badge badge-purple">Active IdP: {{ idpConfigs[selectedIdp].name }}</span>
     </div>
     <div class="flow-steps">
       <div class="flow-step" [class.step-active]="true">
         <div class="step-num">1</div>
         <div class="step-content">
           <h4>Angular SPA</h4>
-          <p>OAuth 2.0 PKCE Code Flow with Keycloak</p>
+          <p>OAuth 2.0 PKCE Code Flow</p>
         </div>
       </div>
       <div class="flow-arrow">➔</div>
       <div class="flow-step" [class.step-active]="isAuthenticated">
         <div class="step-num">2</div>
         <div class="step-content">
-          <h4>Keycloak IdP (:8081)</h4>
-          <p>Issues Signed JWT with Profile & Role Claims</p>
+          <h4>{{ idpConfigs[selectedIdp].name }} (:8081)</h4>
+          <p>Issues Signed RS256 JWT with Claims</p>
         </div>
       </div>
       <div class="flow-arrow">➔</div>
@@ -96,13 +116,19 @@
 
   <!-- Pre-provisioned Demo Accounts Banner -->
   <section class="demo-accounts-banner">
-    <div class="demo-badge">Test Accounts</div>
+    <div class="demo-badge">Test Accounts ({{ idpConfigs[selectedIdp].name }})</div>
     <div class="accounts-grid">
       <div class="account-chip">
-        <strong>Standard User:</strong> <code>alice</code> / <code>alice123</code> <span class="badge badge-blue">Role: user</span>
+        <strong>Standard User:</strong>
+        <code>alice</code> /
+        <code>{{ selectedIdp === 'zitadel' ? 'Alice123!' : 'alice123' }}</code>
+        <span class="badge badge-blue">Role: user</span>
       </div>
       <div class="account-chip">
-        <strong>Administrator:</strong> <code>bob</code> / <code>bob123</code> <span class="badge badge-amber">Role: admin, user</span>
+        <strong>Administrator:</strong>
+        <code>bob</code> /
+        <code>{{ selectedIdp === 'zitadel' ? 'Bob1234!' : 'bob123' }}</code>
+        <span class="badge badge-amber">Role: admin, user</span>
       </div>
     </div>
   </section>
@@ -178,7 +204,7 @@
           <line x1="12" y1="8" x2="12" y2="12"/>
           <line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
-        <span>Authenticate via Keycloak above to unlock API gateway test actions with your personal signed token.</span>
+        <span>Authenticate via {{ idpConfigs[selectedIdp].name }} above to unlock API gateway test actions with your personal signed token.</span>
       </div>
     </div>
 
@@ -237,29 +263,34 @@
       <!-- Tab Content: Decoded Claims -->
       <div *ngIf="activeTab === 'claims'" class="tab-pane">
         <div *ngIf="!isAuthenticated" class="empty-state">
-          <p>No active session. Login with Keycloak to inspect decoded JWT payload claims and roles.</p>
+          <p>No active session. Login with {{ idpConfigs[selectedIdp].name }} to inspect decoded JWT payload claims and roles.</p>
         </div>
 
         <div *ngIf="isAuthenticated && claims" class="claims-container">
           <div class="claims-summary-grid">
             <div class="claim-card">
+              <span class="claim-label">Issuer (iss)</span>
+              <span class="claim-val highlight">{{ claims.iss || 'N/A' }}</span>
+            </div>
+            <div class="claim-card">
               <span class="claim-label">Subject ID (sub)</span>
               <span class="claim-val">{{ claims.sub }}</span>
             </div>
             <div class="claim-card">
-              <span class="claim-label">Username</span>
-              <span class="claim-val highlight">{{ claims.preferred_username || 'N/A' }}</span>
+              <span class="claim-label">Username / Name</span>
+              <span class="claim-val highlight">{{ claims.preferred_username || claims.name || 'N/A' }}</span>
             </div>
             <div class="claim-card">
               <span class="claim-label">Email</span>
               <span class="claim-val highlight">{{ claims.email || 'N/A' }}</span>
             </div>
-            <div class="claim-card">
-              <span class="claim-label">Assigned Roles</span>
+            <div class="claim-card" style="grid-column: 1 / -1;">
+              <span class="claim-label">Assigned Roles (Resolved across Keycloak & ZITADEL specifications)</span>
               <div class="roles-chips">
                 <span *ngFor="let r of roles" class="badge" [class.badge-amber]="r === 'admin'" [class.badge-blue]="r !== 'admin'">
                   {{ r }}
                 </span>
+                <span *ngIf="roles.length === 0" class="badge badge-purple">No roles assigned</span>
               </div>
             </div>
           </div>
@@ -276,7 +307,7 @@
         <div class="guardrails-content">
           <h3>Decoupled APIM Contract Specification</h3>
           <p>
-            Under the <strong>Aitana Auth Architecture</strong>, downstream microservices are completely decoupled from identity provider protocols.
+            Under the <strong>Aitana Auth Architecture</strong>, downstream microservices are completely decoupled from identity provider protocols. Both Keycloak and ZITADEL integrate seamlessly without modifying the Go backend.
           </p>
 
           <div class="spec-table">
