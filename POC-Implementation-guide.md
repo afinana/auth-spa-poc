@@ -4,14 +4,14 @@
 
 &nbsp;
 
-This specification defines the production-grade Proof of Concept (PoC) enterprise software architecture for **Aitana Auth**. Built around a contract-first, zero-trust APIM boundary architecture, the design strictly decouples user identity verification (AuthN) from access policy enforcement (AuthZ). **Keycloak** serves as the centralized Identity Provider (IdP), while **Kong API Gateway** acts as the Policy Enforcement Point (PEP) and perimeter gateway. Downstream microservices, such as the Go backend, remain completely agnostic to OAuth 2.0 protocol mechanics and JWT validation logic, relying exclusively on pre-validated user contexts and boundary assertion headers.
+This specification defines the production-grade Proof of Concept (PoC) enterprise software architecture for **Aitana Auth**. Built around a contract-first, zero-trust APIM boundary architecture, the design strictly decouples user identity verification (AuthN) from access policy enforcement (AuthZ). **Keycloak** (or ZITADEL) serves as the centralized Identity Provider (IdP), while an interchangeable Policy Enforcement Point (PEP) gateway—supporting **Kong Gateway**, **KrakenD Gateway**, or **Tyk Gateway**—enforces perimeter security. Downstream microservices, such as the Go backend, remain completely agnostic to OAuth 2.0 protocol mechanics and JWT validation logic, relying exclusively on pre-validated user contexts and boundary assertion headers.
 
 &nbsp;
 
-* **AuthN Boundary (Keycloak IdP):** The Angular Single Page Application (SPA) redirects unauthenticated users to Keycloak using the OAuth 2.0 Authorization Code Flow with PKCE. Keycloak verifies user credentials, applies client scope mappings, and issues cryptographically signed JSON Web Tokens (JWT) containing normalized identity claims.  
-* **Request Delegation (Angular SPA):** The Angular HTTP client intercepts outgoing backend requests, attaching the JWT access token in the \`Authorization: Bearer\` header strictly for calls destined for the Kong API Gateway proxy.  
-* **PEP Enforcement & Header Injection (Kong Gateway):** Kong intercepts inbound requests at the perimeter, verifies JWT signatures and expirations against Keycloak's public JWKS endpoint, strips external raw \`Authorization\` headers, and injects validated claims into upstream user headers (\`X-User-Username\`, \`X-User-Email\`, \`X-User-Role\`) along with explicit gateway anti-spoofing assertion headers (\`X-Gateway-Token\`, \`X-Enforcement-Point\`).  
-* **Backend Identity Resolution (Go Microservice):** The backend microservice executes middleware to validate mandatory anti-spoofing boundary headers before resolving user context from \`X-User-\*\` headers into native request contexts, enforcing contract-first business logic without token handling overhead.
+* **AuthN Boundary (Keycloak / ZITADEL IdP):** The Angular Single Page Application (SPA) redirects unauthenticated users to the IdP using the OAuth 2.0 Authorization Code Flow with PKCE. The IdP verifies user credentials, applies client scope mappings, and issues cryptographically signed JSON Web Tokens (JWT) containing normalized identity claims (`preferred_username`, `email`, `roles`).  
+* **Request Delegation (Angular SPA):** The Angular HTTP client intercepts outgoing backend requests, attaching the JWT access token in the `Authorization: Bearer` header strictly for calls destined for the API Gateway PEP (port `8000`).  
+* **PEP Enforcement & Header Injection (Kong / KrakenD / Tyk):** The active gateway intercepts inbound requests at the perimeter, verifies JWT signatures and expirations against the IdP's public keys, strips external raw `Authorization` headers, and injects validated claims into upstream user headers (`X-User-Username`, `X-User-Email`, `X-User-Role`) along with explicit gateway anti-spoofing assertion headers (`X-Gateway-Token`, `X-Enforcement-Point`).  
+* **Backend Identity Resolution (Go Microservice):** The backend microservice executes middleware to validate mandatory anti-spoofing boundary headers before resolving user context from `X-User-*` headers into native request contexts, enforcing contract-first business logic and RBAC without token handling overhead.
 
 ##
 
@@ -115,57 +115,70 @@ To achieve zero-touch configuration during local demonstration, export these con
 
 ##
 
-## **5\. Kong API Gateway (PEP Boundary) Declarative**&nbsp;
+## **5\. API Gateway (PEP Boundary) Implementations**
 
-##
+The Aitana Auth architecture supports interchangeable Policy Enforcement Point (PEP) gateways. Each gateway runs on external port `8000`, enforces CORS for the Angular SPA (`http://localhost:4200`), validates RS256 JWT access tokens issued by Keycloak, strips external `Authorization` headers, and injects validated user identity (`X-User-*`) and anti-spoofing assertion headers (`X-Gateway-Token`, `X-Enforcement-Point`).
 
-## **Configuration**
+---
 
-**1.Define the Upstream and Service:**Routing.
+### **5.1 Kong API Gateway (OpenResty / Lua PEP)**
 
-Create an Upstream pointing to your Go microservice (e.g., go-backend:8080) and configure a corresponding Service and Route in Kong.
+* **Architecture:** Nginx / OpenResty runtime with LuaJIT scripting engine.
+* **Operational Mode:** DB-less declarative mode (`KONG_DATABASE: "off"`).
+* **Configuration:** Defined in `kong/kong.yml` and mounted to `/usr/local/kong/declarative/kong.yml`.
+* **Token Validation:** Uses the native `jwt` plugin configured with Keycloak's public RSA key.
+* **Header Injection:** Custom Lua script executed via the `post-function` plugin during the `access` phase:
+  - Parses the JWT using `kong.plugins.jwt.jwt_parser`.
+  - Sets `X-User-Username`, `X-User-Email`, and `X-User-Role`.
+  - Injects `X-Gateway-Token: aitana-poc-gateway-secret-token` and `X-Enforcement-Point: Kong-APIM-Boundary`.
+  - Clears `Authorization` before proxying to `http://go-backend:8080`.
+* **Dedicated Guide:** 👉 [Kong Implementation Guide](KONG-Implementation-Guide.md)
 
-**2.Enable the JWT Plugin:**Token Validation.
+---
 
-Attach the jwt plugin to your Route or Service. You must configure Kong with the public key (or JWKS URI) of your Keycloak Realm so it can cryptographically verify the token signatures.
+### **5.2 KrakenD API Gateway (Stateless Go / Martian PEP)**
 
-**3.Transform Claims to Headers:**Header Injection.
+* **Architecture:** Native compiled Go pipeline (Lura framework). Completely stateless with zero database or Redis dependencies.
+* **Operational Mode:** Declarative JSON configuration (`krakend/krakend.json`).
+* **Configuration:** Defined in `krakend/krakend.json` and mounted to `/etc/krakend/krakend.json`.
+* **Token Validation:** Uses the `auth/validator` component connecting to Keycloak's dynamic JWKS endpoint (`http://keycloak:8080/realms/auth-realm/protocol/openid-connect/certs`) with automatic key caching.
+* **Header Injection:**
+  - `propagate_claims`: Maps `preferred_username` to `X-User-Username`, `email` to `X-User-Email`, and `roles` to `X-User-Role`.
+  - `modifier/martian`: Injects `X-Gateway-Token: aitana-poc-gateway-secret-token` and `X-Enforcement-Point: KrakenD-APIM-Boundary`.
+* **Dedicated Guide:** 👉 [KrakenD Implementation Guide](KRAKEND-Implementation-Guide.md)
 
-To extract claims, inject anti-spoofing headers, and strip external JWT tokens, configure Kong's transformation pipeline. In addition to mapping \`preferred\_username\` to \`X-User-Username\` and \`email\` to \`X-User-Email\`, Kong must inject \`X-Gateway-Token\` and \`X-Enforcement-Point\` header assertions to guarantee gateway trust downstream while handling inbound client credentials and identity federation from Keycloak.
+---
 
-Example Kong Declarative Configuration (kong.yml):
+### **5.3 Tyk API Gateway (Headless / JSVM PEP)**
 
-&nbsp;
+* **Architecture:** Go-based Tyk Gateway core with an embedded JavaScript Virtual Machine (JSVM) and Redis storage for session state and rate limits.
+* **Operational Mode:** Open-source headless mode (file-based API definitions and policies).
+* **Configuration:** Defined in `tyk/tyk.conf`, `tyk/apps/app-backend.json`, and `tyk/policies/policies.json`.
+* **Token Validation:** Built-in `enable_jwt: true` with RS256 signature verification against Keycloak's Base64-encoded public key.
+* **Header Injection:** JavaScript middleware (`tyk/middleware/auth-transform.js`) executing in the `post` authentication phase:
+  - Decodes validated token payload using `b64dec`.
+  - Injects `X-User-Username`, `X-User-Email`, and `X-User-Role`.
+  - Injects `X-Gateway-Token: aitana-poc-gateway-secret-token` and `X-Enforcement-Point: Tyk-APIM-Boundary`.
+  - Strips incoming `Authorization` header.
+* **Dedicated Guide:** 👉 [Tyk Implementation Guide](TYK-Implementation-Guide.md)
 
-```json
-__format_version: "3.0"
+---
 
-services:
-  - name: go-backend-service
-    url: http://go-backend:8080
-    routes:
-      - name: backend-route
-        paths:
-          - /api
-    plugins:
-      - name: jwt
-        config:
-          claims_to_verify:
-            - exp
-      - name: request-transformer
-        config:
-          remove:
-            headers:
-              - Authorization
-          add:
-            headers:
-              - "X-User-Username:$(headers.preferred_username)"
-              - "X-User-Email:$(headers.email)"
-              - "X-Gateway-Token:aitana-poc-gateway-secret-token"
-              - "X-Enforcement-Point:Kong-APIM-Boundary"
-```
+### **5.4 Comparative Evaluation Matrix: KrakenD vs. Kong vs. Tyk**
 
-##
+| Architectural Dimension | KrakenD Gateway (v2.7) | Kong Gateway (v3.6) | Tyk Gateway (v5.3) |
+|---|---|---|---|
+| **Core Engine** | Go (Lura engine) | OpenResty (Nginx + LuaJIT) | Go (Tyk Core + JSVM) |
+| **State / Storage Dependency** | None (Stateless) | None in DB-less mode | Redis required (`tyk-redis:6379`) |
+| **Configuration Format** | Declarative JSON (`krakend.json`) | Declarative YAML (`kong.yml`) | Declarative JSON (`tyk.conf`, `apps/`, `policies/`) |
+| **Token Validation Source** | Dynamic JWKS URL (`/certs`) | Public Key (PEM in `jwt_secrets`) | Base64 RSA Public Key / JWKS URL |
+| **Transformation Mechanism** | Martian modifiers & claim propagation | Lua script (`post-function`) | JSVM middleware (`auth-transform.js`) |
+| **Throughput & Latency** | Ultra-high throughput, sub-ms latency | High throughput, low latency | High throughput, low latency |
+| **Memory Footprint** | Extremely low (~25-40 MB) | Low to moderate (~60-120 MB) | Moderate (~80-150 MB + Redis) |
+| **Enforcement Point Header** | `KrakenD-APIM-Boundary` | `Kong-APIM-Boundary` | `Tyk-APIM-Boundary` |
+| **Best Fit Use Case** | Ultra-fast, stateless microservice PEP | Mature enterprise ecosystem & Lua plugins | Rich API lifecycle & headless/hybrid flexibility |
+
+---
 
 ## **6\. Angular Frontend Implementation Specification**
 
@@ -239,42 +252,53 @@ export class AuthInterceptor implements HttpInterceptor {
 
 &nbsp;
 
-The Go backend remains completely agnostic to Keycloak and JWTs. It relies on standard HTTP middleware to extract the trusted headers provided by Kong.
+The Go backend remains completely agnostic to Keycloak and JWTs. It relies on standard HTTP middleware to extract the trusted headers provided by the active API Gateway (Kong, KrakenD, or Tyk).
 
 &nbsp;
 
 ```go
-ppackage main
+package main
 
 import (
- "context"
- "fmt"
- "net/http"
+	"context"
+	"fmt"
+	"net/http"
 )
 
 type userContextKey string
 
 const userCtxKey userContextKey = "user_identity"
 
+const (
+	ExpectedGatewayToken           = "aitana-poc-gateway-secret-token"
+	ExpectedEnforcementPointKong   = "Kong-APIM-Boundary"
+	ExpectedEnforcementPointKraken = "KrakenD-APIM-Boundary"
+	ExpectedEnforcementPointTyk    = "Tyk-APIM-Boundary"
+)
+
+func isValidEnforcementPoint(ep string) bool {
+	return ep == ExpectedEnforcementPointKong || ep == ExpectedEnforcementPointKraken || ep == ExpectedEnforcementPointTyk
+}
+
 type UserIdentity struct {
- Username         string
- Email            string
- Role             string
- GatewayToken     string
- EnforcementPoint string
+	Username         string `json:"username"`
+	Email            string `json:"email"`
+	Role             string `json:"role"`
+	GatewayToken     string `json:"gatewayToken"`
+	EnforcementPoint string `json:"enforcementPoint"`
 }
 
 // Middleware to enforce zero-trust boundary headers and extract user identity
 func AuthHeaderMiddleware(next http.Handler) http.Handler {
- return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-  gatewayToken := r.Header.Get("X-Gateway-Token")
-  enforcementPoint := r.Header.Get("X-Enforcement-Point")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gatewayToken := r.Header.Get("X-Gateway-Token")
+		enforcementPoint := r.Header.Get("X-Enforcement-Point")
 
-  // Validate mandatory anti-spoofing gateway headers
-  if gatewayToken != "aitana-poc-gateway-secret-token" || enforcementPoint != "Kong-APIM-Boundary" {
-   http.Error(w, "Forbidden: Untrusted gateway boundary", http.StatusForbidden)
-   return
-  }
+		// Validate mandatory anti-spoofing gateway headers across Kong, KrakenD, or Tyk
+		if gatewayToken != ExpectedGatewayToken || !isValidEnforcementPoint(enforcementPoint) {
+			http.Error(w, "Forbidden: Untrusted gateway boundary", http.StatusForbidden)
+			return
+		}
 
   username := r.Header.Get("X-User-Username")
   email := r.Header.Get("X-User-Email")

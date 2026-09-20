@@ -19,11 +19,12 @@ const (
 	ExpectedGatewayToken           = "aitana-poc-gateway-secret-token"
 	ExpectedEnforcementPointKong   = "Kong-APIM-Boundary"
 	ExpectedEnforcementPointKraken = "KrakenD-APIM-Boundary"
+	ExpectedEnforcementPointTyk    = "Tyk-APIM-Boundary"
 	ExpectedEnforcementPoint       = ExpectedEnforcementPointKong
 )
 
 func isValidEnforcementPoint(ep string) bool {
-	return ep == ExpectedEnforcementPointKong || ep == ExpectedEnforcementPointKraken
+	return ep == ExpectedEnforcementPointKong || ep == ExpectedEnforcementPointKraken || ep == ExpectedEnforcementPointTyk
 }
 
 

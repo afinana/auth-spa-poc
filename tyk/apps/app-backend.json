@@ -1,0 +1,70 @@
+{
+  "name": "Aitana Backend API",
+  "api_id": "backend-api",
+  "org_id": "default",
+  "definition": {
+    "location": "header",
+    "key": "version"
+  },
+  "use_keyless": false,
+  "enable_jwt": true,
+  "jwt_signing_method": "rsa",
+  "jwt_source": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2twaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF4YURpTUFUVmFEaXVwVW1aZFQyMgpmRzJ0QjdBb2lXZmROMUdnMWhxaHNPYU8zeG84ME54VnEzZktvL0JHd1ZvVktnOFgzK1g0Z1RQTGdFdUZUQjEvCkZaMVdmdGQxQzlFWSthNFdHKzlqR09VME9MLzVmTjZPMFIzN3YzZ1VsRTBlbTJnL2dHOWZxYU5ZYy94a1YxMmsKMUJBVGxZenRyWnVVbEhVRlZIaUx1ak9INHY2anE0WElCNWlrbkZLbWU0NHNIakxjc2tqUFhMMUhsRE1kc2wvdQpEYXF5VzFPaktYTlBVQWl5ekNyL3NmcUJtZmpKODFPNWs0eUw2WDk4Zkp3OEJHTEFDUStXZDdpc05tbmRsOStOCjlMNFRiSElYQU1XZXJaYlhnWlhKVThsTUJWTnFRSXZoOGY5dEZCNHZvbzR2Y1Z2OU9OektLcExza3A3V203UWcKOVFJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0t",
+  "jwt_identity_base_field": "preferred_username",
+  "jwt_skip_kid": true,
+  "jwt_default_policies": [
+    "default-policy"
+  ],
+  "version_data": {
+    "not_versioned": true,
+    "versions": {
+      "Default": {
+        "name": "Default",
+        "use_extended_paths": true
+      }
+    }
+  },
+  "proxy": {
+    "listen_path": "/api/",
+    "target_url": "http://go-backend:8080",
+    "strip_listen_path": false
+  },
+  "CORS": {
+    "enable": true,
+    "allowed_origins": [
+      "http://localhost:4200"
+    ],
+    "allowed_methods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE",
+      "OPTIONS",
+      "HEAD"
+    ],
+    "allowed_headers": [
+      "Authorization",
+      "Content-Type",
+      "Accept",
+      "Origin",
+      "X-Requested-With"
+    ],
+    "exposed_headers": [
+      "Content-Length",
+      "Content-Type"
+    ],
+    "allow_credentials": true,
+    "max_age": 43200,
+    "options_passthrough": false
+  },
+  "custom_middleware": {
+    "post": [
+      {
+        "name": "authTransformMiddleware",
+        "path": "/opt/tyk-gateway/middleware/auth-transform.js",
+        "require_session": false
+      }
+    ]
+  },
+  "active": true
+}

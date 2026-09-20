@@ -1,0 +1,20 @@
+{
+  "default-policy": {
+    "name": "Default Policy",
+    "active": true,
+    "rate": 10000,
+    "per": 60,
+    "quota_max": -1,
+    "quota_renewal_rate": -1,
+    "access_rights": {
+      "backend-api": {
+        "api_id": "backend-api",
+        "api_name": "Aitana Backend API",
+        "versions": [
+          "Default"
+        ],
+        "allowed_urls": []
+      }
+    }
+  }
+}

@@ -78,16 +78,18 @@ Manage organizations, projects, applications, and users at [http://localhost:808
 | **Project** | **`auth-spa-poc`** | Application project containing roles and OIDC client |
 | **Client ID** | `391627259401797638` | Native ZITADEL OIDC Public Client |
 
-### 2.4 API Gateways (KrakenD & Kong PEP) & Boundary Tokens
+### 2.4 API Gateways (KrakenD, Kong & Tyk PEP) & Boundary Tokens
 
 | Parameter | Setting / Value | Description |
 |---|---|---|
 | **KrakenD Proxy Endpoint** | `http://localhost:8000` | KrakenD gateway entrypoint for API calls |
 | **Kong Proxy Endpoint** | `http://localhost:8000` | Kong gateway entrypoint for API calls |
+| **Tyk Proxy Endpoint** | `http://localhost:8000` | Tyk gateway entrypoint for API calls |
 | **Kong Admin API** | `http://localhost:8001` | Declarative configuration and status endpoint (Kong stack) |
 | **Boundary Gateway Secret** | `aitana-poc-gateway-secret-token` | Injected as `X-Gateway-Token`, validated by Go microservice |
 | **KrakenD Enforcement Point**| `KrakenD-APIM-Boundary` | Injected as `X-Enforcement-Point` by KrakenD, validated by Go microservice |
 | **Kong Enforcement Point** | `Kong-APIM-Boundary` | Injected as `X-Enforcement-Point` by Kong, validated by Go microservice |
+| **Tyk Enforcement Point** | `Tyk-APIM-Boundary` | Injected as `X-Enforcement-Point` by Tyk, validated by Go microservice |
 
 
 ### 2.5 Database Persistence
@@ -99,12 +101,20 @@ Manage organizations, projects, applications, and users at [http://localhost:808
 
 ---
 
-## 3. Module Documentation & Deep Dives
+## 3. Architecture & Implementation Guides
 
-For in-depth specifications, architectural internals, and module-specific guides, refer to:
+For in-depth specifications, architectural internals, gateway comparison, and module-specific guides, refer to:
 
-- 🖥️ **[Frontend Application (Angular 19)](frontend/README.md)**: Detailed documentation on Dual-IdP support (Keycloak & ZITADEL), OAuth 2.0 Authorization Code Flow with PKCE, client-side JWT claims parsing, UI role rendering, and automatic Bearer token injection via `AuthInterceptor`.
-- ⚙️ **[Backend Microservice (Go)](backend/README.md)**: Detailed documentation on Zero-Trust boundary verification (`X-Gateway-Token`, `X-Enforcement-Point`), identity context extraction, RBAC enforcement (`/api/admin`), and unit test suite.
+### 3.1 Gateway PEP Deep Dives
+- 🦍 **[Kong Implementation Guide](KONG-Implementation-Guide.md)**: Declarative DB-less setup, JWT plugin, Lua claim transformation (`post-function`), anti-spoofing injection, and Kong Admin API.
+- 🐙 **[KrakenD Implementation Guide](KRAKEND-Implementation-Guide.md)**: Stateless Lura Go engine, dynamic JWKS caching (`auth/validator`), Martian request modifiers, and ultra-high-throughput routing.
+- 🛡️ **[Tyk Implementation Guide](TYK-Implementation-Guide.md)**: Headless open-source setup, Redis session storage, RS256 JWT validation, and JavaScript Virtual Machine (JSVM) middleware.
+
+### 3.2 System Architecture & Component Guides
+- 📖 **[PoC Master Architecture Guide](POC-Implementation-guide.md)**: Contract-first zero-trust APIM boundary principles, comparative gateway evaluation matrix, network isolation, and PKCE flow.
+- 🔐 **[ZITADEL Implementation Plan](ZITADEL-Implementation-Plan.md)**: Dual-IdP integration plan detailing Keycloak and ZITADEL compatibility.
+- 🖥️ **[Frontend Application (Angular 19)](frontend/README.md)**: Dual-IdP support, OAuth 2.0 Authorization Code Flow with PKCE, client-side JWT claims parsing, and `AuthInterceptor`.
+- ⚙️ **[Backend Microservice (Go)](backend/README.md)**: Zero-Trust boundary verification (`X-Gateway-Token`, `X-Enforcement-Point`), identity context extraction, RBAC enforcement (`/api/admin`), and unit test suite.
 
 ---
 
@@ -115,6 +125,7 @@ auth-spa-poc/
 ├── docker-compose.yml              # Complete environment orchestration (KrakenD API GW + Keycloak IdP)
 ├── docker-compose.krakend.yml      # Explicit KrakenD stack compose file
 ├── docker-compose.keycloak-kong.yml# Complete environment orchestration (Kong API GW + Keycloak IdP)
+├── docker-compose.tyk.yml          # Complete environment orchestration (Tyk API GW + Keycloak IdP)
 ├── docker-compose.zitadel.yml      # Complete environment orchestration (Kong API GW + ZITADEL IdP)
 ├── POC-Implementation-guide.md     # Architectural guide and requirements
 ├── Project-Implementation-plan.md  # Detailed implementation specification
@@ -130,6 +141,15 @@ auth-spa-poc/
 ├── kong/
 │   ├── kong.yml                    # Declarative configuration for Keycloak IdP
 │   └── kong.zitadel.yml            # Declarative configuration for ZITADEL IdP
+├── tyk/
+│   ├── tyk.conf                    # Declarative headless gateway configuration
+│   ├── README.md                   # Tyk configuration guide
+│   ├── apps/
+│   │   └── app-backend.json        # API definition with JWT & CORS
+│   ├── policies/
+│   │   └── policies.json           # Headless security policies
+│   └── middleware/
+│       └── auth-transform.js       # JS middleware for JWT claims & header injection
 ├── backend/
 │   ├── README.md                   # 📖 Backend architecture, zero-trust headers & RBAC guide
 │   ├── go.mod                      # Go module definition
@@ -245,6 +265,34 @@ You should see:
 - `zitadel-postgres` (`:5432`)
 
 To stop: `docker compose -f docker-compose.zitadel.yml down`
+
+### 5.5 Starting the Keycloak + Tyk Stack
+
+To run the PoC with the **Tyk API Gateway** (headless mode with Redis) and **Keycloak Identity Provider**:
+
+```bash
+# 1. Stop current stack if running
+docker compose down
+
+# 2. Launch Keycloak + Tyk stack
+docker compose -f docker-compose.tyk.yml up -d
+```
+
+Verify that all containers are running:
+
+```bash
+docker compose -f docker-compose.tyk.yml ps
+```
+
+You should see:
+- `angular-frontend` (`:4200`)
+- `tyk-gateway` (`:8000`)
+- `tyk-redis` (`:6379`)
+- `go-backend` (`:8080`)
+- `keycloak` (`:8081`)
+- `postgres` (`:5432`)
+
+To stop: `docker compose -f docker-compose.tyk.yml down`
 
 ---
 
