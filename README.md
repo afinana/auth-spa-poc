@@ -88,7 +88,16 @@ Manage realms, clients, user attributes, and roles at [http://localhost:8081/adm
 
 ---
 
-## 3. Project Directory Structure
+## 3. Module Documentation & Deep Dives
+
+For in-depth specifications, architectural internals, and module-specific guides, refer to:
+
+- 🖥️ **[Frontend Application (Angular 19)](frontend/README.md)**: Detailed documentation on OAuth 2.0 Authorization Code Flow with PKCE, client-side JWT claims parsing, UI role rendering, and automatic Bearer token injection via `AuthInterceptor`.
+- ⚙️ **[Backend Microservice (Go)](backend/README.md)**: Detailed documentation on Zero-Trust boundary verification (`X-Gateway-Token`, `X-Enforcement-Point`), identity context extraction, RBAC enforcement (`/api/admin`), and unit test suite.
+
+---
+
+## 4. Project Directory Structure
 
 ```
 auth-spa-poc/
@@ -101,11 +110,13 @@ auth-spa-poc/
 ├── kong/
 │   └── kong.yml                    # Declarative DB-less Kong configuration (CORS, JWT, transforms)
 ├── backend/
+│   ├── README.md                   # 📖 Backend architecture, zero-trust headers & RBAC guide
 │   ├── go.mod                      # Go module definition
 │   ├── main.go                     # Go microservice with zero-trust middleware & RBAC
 │   ├── main_test.go                # Unit test suite for boundary and authorization
 │   └── Dockerfile.backend          # Multi-stage minimal container build
 └── frontend/
+    ├── README.md                   # 📖 Frontend architecture, JWT claims & PKCE guide
     ├── angular.json                # Angular CLI configuration
     ├── package.json                # Angular dependencies (including angular-oauth2-oidc)
     ├── nginx.conf                  # Nginx configuration with CSP and security headers
@@ -125,9 +136,9 @@ auth-spa-poc/
 
 ---
 
-## 4. Quick Start & Execution
+## 5. Quick Start & Execution
 
-### 4.1 Prerequisites
+### 5.1 Prerequisites
 - Docker & Docker Compose (v2 or higher)
 - Go (optional, for local testing: v1.24+)
 - Node.js & npm (optional, for local frontend development: v20+)
@@ -154,9 +165,9 @@ You should see:
 
 ---
 
-## 5. Interactive Testing & Verification Guide
+## 6. Interactive Testing & Verification Guide
 
-### 5.1 Browser Testing (Angular SPA)
+### 6.1 Browser Testing (Angular SPA)
 Open **[http://localhost:4200](http://localhost:4200)** in your browser:
 
 1. **Direct Bypass Test (Zero-Trust Validation)**:
@@ -179,7 +190,7 @@ Open **[http://localhost:4200](http://localhost:4200)** in your browser:
 
 ---
 
-### 5.2 Automated CLI & Curl Testing
+### 6.2 Automated CLI & Curl Testing
 
 #### 1. Test Direct Backend Access (Expected: 403 Forbidden)
 ```bash
@@ -233,7 +244,7 @@ cd backend && go test -v ./...
 
 ---
 
-## 6. Zero-Trust Network Defense in Kubernetes
+## 7. Zero-Trust Network Defense in Kubernetes
 
 When deploying to Kubernetes (K3s, EKS, GKE), internal network isolation is enforced through network policies:
 - Microservices are exposed exclusively via **ClusterIP** (never NodePort or LoadBalancer).
