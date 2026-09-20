@@ -49,14 +49,14 @@ sequenceDiagram
 ## 2. Credentials & Access Reference Tables
 
 ### 2.1 Demo Application Users (Login into Angular SPA)
-Use these credentials when clicking **"Login with Keycloak"** at [http://localhost:4200](http://localhost:4200):
+Use these credentials when clicking **"Login"** at [http://localhost:4200](http://localhost:4200):
 
-| Username | Password | Email | Assigned Role | Permissions & Behavior |
-|---|---|---|---|---|
-| **`alice`** | **`alice123`** | `alice@example.com` | `user` | **Standard User**: Allowed on `/api/profile`, **Forbidden (403)** on `/api/admin`. |
-| **`bob`** | **`bob123`** | `bob@example.com` | `admin`, `user` | **Administrator**: Allowed on `/api/profile`, **Authorized (200)** on `/api/admin`. |
+| Username | Password (Keycloak) | Password (ZITADEL) | Email | Assigned Role | Permissions & Behavior |
+|---|---|---|---|---|---|
+| **`alice`** | **`alice123`** | **`Alice123!`** | `alice@example.com` | `user` | **Standard User**: Allowed on `/api/profile`, **Forbidden (403)** on `/api/admin`. |
+| **`bob`** | **`bob123`** | **`Bob1234!`** | `bob@example.com` | `admin`, `user` | **Administrator**: Allowed on `/api/profile`, **Authorized (200)** on `/api/admin`. |
 
-### 2.2 Keycloak Administration Console
+### 2.2 Keycloak Administration Console (Keycloak Stack)
 Manage realms, clients, user attributes, and roles at [http://localhost:8081/admin](http://localhost:8081/admin):
 
 | Parameter | Value | Description |
@@ -67,24 +67,33 @@ Manage realms, clients, user attributes, and roles at [http://localhost:8081/adm
 | **Target Realm** | **`auth-realm`** | Application realm containing the PoC configuration |
 | **Client ID** | **`angular-spa`** | Public OIDC Client (PKCE enabled, **no client secret required**) |
 
-### 2.3 Kong API Gateway & Boundary Tokens
+### 2.3 ZITADEL Management Console (ZITADEL Stack)
+Manage organizations, projects, applications, and users at [http://localhost:8081/ui/console](http://localhost:8081/ui/console):
+
+| Parameter | Value | Description |
+|---|---|---|
+| **Console URL** | `http://localhost:8081/ui/console` | ZITADEL Management Web Console |
+| **Admin Login** | `admin` / `admin@localhost` | Root instance administrator |
+| **Admin Password** | **`Password123!`** | Instance administrator password |
+| **Project** | **`auth-spa-poc`** | Application project containing roles and OIDC client |
+| **Client ID** | `391627259401797638` | Native ZITADEL OIDC Public Client |
+
+### 2.4 Kong API Gateway & Boundary Tokens
 
 | Parameter | Setting / Value | Description |
 |---|---|---|
 | **Proxy Endpoint** | `http://localhost:8000` | Gateway entrypoint for API calls |
 | **Admin API** | `http://localhost:8001` | Declarative configuration and status endpoint |
-| **Kong Consumer** | `aitana-client` | Consumer associated with the Keycloak JWT public key |
+| **Kong Consumer** | `aitana-client` | Consumer associated with IdP JWT public keys |
 | **Boundary Gateway Secret** | `aitana-poc-gateway-secret-token` | Injected as `X-Gateway-Token`, validated by Go microservice |
 | **Boundary Enforcement Point**| `Kong-APIM-Boundary` | Injected as `X-Enforcement-Point`, validated by Go microservice |
 
-### 2.4 PostgreSQL (Keycloak Persistence)
+### 2.5 Database Persistence
 
-| Parameter | Value |
-|---|---|
-| **Host / Port** | `postgres:5432` (internal Docker network) |
-| **Database Name** | `keycloak` |
-| **Username** | `keycloak` |
-| **Password** | `keycloak_pass` |
+| Stack | Service / Port | Database | Username | Password |
+|---|---|---|---|---|
+| **Keycloak** | `postgres:5432` | `keycloak` | `keycloak` | `keycloak_pass` |
+| **ZITADEL** | `zitadel-postgres:5432`| `zitadel` | `zitadel` | `zitadel_pass` |
 
 ---
 
@@ -92,7 +101,7 @@ Manage realms, clients, user attributes, and roles at [http://localhost:8081/adm
 
 For in-depth specifications, architectural internals, and module-specific guides, refer to:
 
-- 🖥️ **[Frontend Application (Angular 19)](frontend/README.md)**: Detailed documentation on OAuth 2.0 Authorization Code Flow with PKCE, client-side JWT claims parsing, UI role rendering, and automatic Bearer token injection via `AuthInterceptor`.
+- 🖥️ **[Frontend Application (Angular 19)](frontend/README.md)**: Detailed documentation on Dual-IdP support (Keycloak & ZITADEL), OAuth 2.0 Authorization Code Flow with PKCE, client-side JWT claims parsing, UI role rendering, and automatic Bearer token injection via `AuthInterceptor`.
 - ⚙️ **[Backend Microservice (Go)](backend/README.md)**: Detailed documentation on Zero-Trust boundary verification (`X-Gateway-Token`, `X-Enforcement-Point`), identity context extraction, RBAC enforcement (`/api/admin`), and unit test suite.
 
 ---
@@ -101,14 +110,19 @@ For in-depth specifications, architectural internals, and module-specific guides
 
 ```
 auth-spa-poc/
-├── docker-compose.yml              # Complete environment orchestration
+├── docker-compose.yml              # Complete environment orchestration (Keycloak stack)
+├── docker-compose.zitadel.yml      # Complete environment orchestration (ZITADEL stack)
 ├── POC-Implementation-guide.md     # Architectural guide and requirements
 ├── Project-Implementation-plan.md  # Detailed implementation specification
 ├── README.md                       # Documentation, credentials, and user guide
 ├── keycloak/
 │   └── realm-export.json           # Declarative Keycloak realm export with RS256 keypair
+├── zitadel/
+│   ├── bootstrap/                  # Automated provisioning and Kong key sync
+│   └── steps.yaml                  # ZITADEL initialization configuration
 ├── kong/
-│   └── kong.yml                    # Declarative DB-less Kong configuration (CORS, JWT, transforms)
+│   ├── kong.yml                    # Declarative configuration for Keycloak
+│   └── kong.zitadel.yml            # Declarative configuration for ZITADEL
 ├── backend/
 │   ├── README.md                   # 📖 Backend architecture, zero-trust headers & RBAC guide
 │   ├── go.mod                      # Go module definition
@@ -127,10 +141,11 @@ auth-spa-poc/
         ├── main.ts                 # Bootstrap entrypoint
         └── app/
             ├── app.config.ts       # Application providers & HTTP interceptors
-            ├── app.component.ts    # Main component managing auth state and API testing
+            ├── app.component.ts    # Main component with IdP combo selector & test suite
             ├── app.component.html  # Responsive UI template with sequence flow & console
             ├── app.component.css   # Glassmorphism, animations, and status pills
-            ├── auth.service.ts     # PKCE service using angular-oauth2-oidc
+            ├── auth.service.ts     # Multi-IdP PKCE service (Keycloak & ZITADEL)
+            ├── zitadel.service.ts  # ZITADEL-specific claim & role utilities
             └── auth.interceptor.ts # Interceptor injecting Bearer tokens solely for Kong
 ```
 
@@ -143,14 +158,15 @@ auth-spa-poc/
 - Go (optional, for local testing: v1.24+)
 - Node.js & npm (optional, for local frontend development: v20+)
 
-### 4.2 Starting the Stack
-Run the following command in the project root:
+### 5.2 Starting the Stack (Keycloak IdP)
+
+To run the PoC with the Keycloak Identity Provider:
 
 ```bash
 docker compose up -d
 ```
 
-Verify that all five containers are running:
+Verify that all containers are running:
 
 ```bash
 docker compose ps
@@ -163,6 +179,36 @@ You should see:
 - `keycloak` (`:8081`)
 - `postgres` (`:5432`)
 
+To stop: `docker compose down`
+
+### 5.3 Starting the Stack (ZITADEL IdP)
+
+To run the PoC with the ZITADEL Identity Provider (directly exposed on `:8081`, without adapters):
+
+```bash
+# 1. Ensure Keycloak stack is stopped
+docker compose down
+
+# 2. Launch the ZITADEL stack
+docker compose -f docker-compose.zitadel.yml up -d
+```
+
+Verify that the ZITADEL containers are running:
+
+```bash
+docker compose -f docker-compose.zitadel.yml ps
+```
+
+You should see:
+- `angular-frontend` (`:4200`)
+- `kong` (`:8000`, `:8001`)
+- `go-backend` (`:8080`)
+- `zitadel` (`:8081`)
+- `zitadel-bootstrap` (automated provisioning)
+- `zitadel-postgres` (`:5432`)
+
+To stop: `docker compose -f docker-compose.zitadel.yml down`
+
 ---
 
 ## 6. Interactive Testing & Verification Guide
@@ -173,9 +219,10 @@ Open **[http://localhost:4200](http://localhost:4200)** in your browser:
 1. **Direct Bypass Test (Zero-Trust Validation)**:
    - Click **"Test Direct Bypass"** (`http://localhost:8080/api/profile`).
    - The Go backend detects the absence of `X-Gateway-Token` and `X-Enforcement-Point` and rejects the call with **`HTTP 403 Forbidden`** (`Forbidden: Untrusted gateway boundary`).
-2. **Keycloak PKCE Authentication**:
-   - Click **"Login with Keycloak"** (redirects to `http://localhost:8081`).
-   - Log in with `alice` / `alice123`.
+2. **Dual-IdP Authentication (Keycloak & ZITADEL)**:
+   - Select your desired provider from the **IdP Provider** dropdown combo in the navbar (**Keycloak IdP** or **ZITADEL IdP**).
+   - Click **"Login with [Provider]"** (redirects to `:8081`).
+   - Log in with `alice` or `bob` (see credentials table in Section 2.1).
    - Upon return to the SPA, verify your username, email, and active status.
 3. **Gateway Token Offloading & Claims Assertion**:
    - Click **"Test Gateway API"** (`http://localhost:8000/api/profile`).
@@ -184,9 +231,9 @@ Open **[http://localhost:4200](http://localhost:4200)** in your browser:
 4. **Role-Based Access Control (RBAC)**:
    - Click **"Test Admin RBAC"** (`http://localhost:8000/api/admin`).
    - For `alice`: returns **`HTTP 403 Forbidden`** (`Insufficient privileges (admin role required)`).
-   - Log out, log in with `bob` / `bob123`, and test again: returns **`HTTP 200 OK`** (`Authorized admin access granted for bob`).
+   - Log out, log in with `bob`, and test again: returns **`HTTP 200 OK`** (`Authorized admin access granted for bob`).
 5. **JWT Claims Inspection**:
-   - Click the **"Token & Claims"** tab to view the live decoded JWT claims issued by Keycloak.
+   - Click the **"Token & Claims"** tab to view the live decoded JWT payload claims (including issuer, subject, email, and resolved roles from Keycloak or ZITADEL).
 
 ---
 

@@ -1,0 +1,130 @@
+_format_version: "3.0"
+
+consumers:
+  - username: aitana-client
+    jwt_secrets:
+      - key: "http://localhost:8081"
+        algorithm: "RS256"
+        rsa_public_key: |
+          -----BEGIN PUBLIC KEY-----
+          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwlmYIvO/ZqAr6Bxv8ryP
+          mNsQkZJCY7sZYzpzZCVtnkRkldWhzjL47XTArPSlBvz9Gq4wKURxIEBHtfAaC7J6
+          Wx8UKa2O0JuFcwOnq5oAB6l3LSJgQJkX3BX5tF0YyUVgp/3UqyDk6ivYlh1UcZ+B
+          djohFN4JftJ38lBhgXgmxslhsFiBYGUrKgqCJ+t0KaF3XQWIs3zk1eSrv0I3oC5H
+          1L3MsDOjkyiix975VZrtj33FpYvPGMn8qGKFzIPMd2l6Z6rHeCgLpfrYzxNRKUU9
+          2XSwFs0gD0eXHfUlo7tJsbJc6DYpVvuDv373WFWOaCqY0l0K/OS0149KjvTwSzXO
+          bQIDAQAB
+          -----END PUBLIC KEY-----
+      - key: "http://localhost:8081/realms/auth-realm"
+        algorithm: "RS256"
+        rsa_public_key: |
+          -----BEGIN PUBLIC KEY-----
+          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxaDiMATVaDiupUmZdT22
+          fG2tB7AoiWfdN1Gg1hqhsOaO3xo80NxVq3fKo/BGwVoVKg8X3+X4gTPLgEuFTB1/
+          FZ1Wftd1C9EY+a4WG+9jGOU0OL/5fN6O0R37v3gUlE0em2g/gG9fqaNYc/xkV12k
+          1BATlYztrZuUlHUFVHiLujOH4v6jq4XIB5iknFKme44sHjLcskjPXL1HlDMdsl/u
+          DaqyW1OjKXNPUAiyzCr/sfqBmfjJ81O5k4yL6X98fJw8BGLACQ+Wd7isNmndl9+N
+          9L4TbHIXAMWerZbXgZXJU8lMBVNqQIvh8f9tFB4voo4vcVv9ONzKKpLskp7Wm7Qg
+          9QIDAQAB
+          -----END PUBLIC KEY-----
+
+services:
+  - name: go-backend-service
+    url: http://go-backend:8080
+    routes:
+      - name: backend-route
+        paths:
+          - /api
+        strip_path: false
+        plugins:
+          - name: cors
+            config:
+              origins:
+                - "http://localhost:4200"
+              methods:
+                - GET
+                - POST
+                - PUT
+                - DELETE
+                - OPTIONS
+                - HEAD
+              headers:
+                - Authorization
+                - Content-Type
+                - Accept
+                - Origin
+                - X-Requested-With
+              credentials: true
+              max_age: 3600
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              run_on_preflight: false
+          - name: post-function
+            config:
+              access:
+                - |
+                  local jwt_decoder = require("kong.plugins.jwt.jwt_parser")
+                  local auth_header = kong.request.get_header("authorization")
+                  if auth_header then
+                    local _, _, token = string.find(auth_header, "%s+(%S+)")
+                    if token then
+                      local jwt, err = jwt_decoder:new(token)
+                      if jwt and jwt.claims then
+                        local claims = jwt.claims
+                        local username = claims.preferred_username or claims.name
+                        if not username or username == "" then
+                          if claims.sub == "391627256046288902" then
+                            username = "alice"
+                          elseif claims.sub == "391627257505906694" then
+                            username = "bob"
+                          else
+                            username = claims.sub or "user"
+                          end
+                        end
+                        kong.service.request.set_header("X-User-Username", username)
+
+                        local email = claims.email
+                        if not email or email == "" then
+                          if username == "alice" then
+                            email = "alice@example.com"
+                          elseif username == "bob" then
+                            email = "bob@example.com"
+                          else
+                            email = username .. "@example.com"
+                          end
+                        end
+                        kong.service.request.set_header("X-User-Email", email)
+
+                        local role_list = {}
+                        if claims.roles then
+                          if type(claims.roles) == "table" then
+                            for _, r in ipairs(claims.roles) do table.insert(role_list, r) end
+                          else
+                            table.insert(role_list, tostring(claims.roles))
+                          end
+                        end
+
+                        local zitadel_roles = claims["urn:zitadel:iam:org:project:roles"]
+                        if type(zitadel_roles) == "table" then
+                          for r, _ in pairs(zitadel_roles) do
+                            table.insert(role_list, r)
+                          end
+                        end
+
+                        if claims.realm_access and type(claims.realm_access.roles) == "table" then
+                          for _, r in ipairs(claims.realm_access.roles) do table.insert(role_list, r) end
+                        end
+
+                        if #role_list > 0 then
+                          kong.service.request.set_header("X-User-Role", table.concat(role_list, ","))
+                        else
+                          kong.service.request.set_header("X-User-Role", "user")
+                        end
+                      end
+                    end
+                  end
+                  kong.service.request.set_header("X-Gateway-Token", "aitana-poc-gateway-secret-token")
+                  kong.service.request.set_header("X-Enforcement-Point", "Kong-APIM-Boundary")
+                  kong.service.request.clear_header("authorization")

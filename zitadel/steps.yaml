@@ -1,0 +1,21 @@
+FirstInstance:
+  InstanceName: "Aitana"
+  DefaultLanguage: "en"
+  PatPath: "/zitadel-data/admin.pat"
+  Org:
+    Name: "Aitana"
+    Human:
+      UserName: "admin"
+      FirstName: "Aitana"
+      LastName: "Admin"
+      Email:
+        Address: "admin@localhost"
+        Verified: true
+      Password: "Password123!"
+      PasswordChangeRequired: false
+    Machine:
+      Machine:
+        Username: "bootstrap-service"
+        Name: "Bootstrap Service"
+      Pat:
+        ExpirationDate: "2029-01-01T00:00:00Z"

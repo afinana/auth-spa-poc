@@ -1,0 +1,112 @@
+networks:
+  auth-net:
+    driver: bridge
+
+volumes:
+  zitadel_postgres_data:
+  zitadel_shared_data:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: zitadel-postgres
+    environment:
+      POSTGRES_DB: zitadel
+      POSTGRES_USER: zitadel
+      POSTGRES_PASSWORD: zitadel_pass
+    volumes:
+      - zitadel_postgres_data:/var/lib/postgresql/data
+    networks:
+      - auth-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zitadel"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  zitadel:
+    image: ghcr.io/zitadel/zitadel:v2.68.0
+    container_name: zitadel
+    user: "0:0"
+    command: start-from-init --masterkey "MasterkeyNeedsToHave32Characters" --tlsMode disabled --steps /etc/zitadel/steps.yaml
+    environment:
+      ZITADEL_DATABASE_POSTGRES_HOST: postgres
+      ZITADEL_DATABASE_POSTGRES_PORT: 5432
+      ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: zitadel_pass
+      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
+      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: zitadel
+      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: zitadel_pass
+      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
+      ZITADEL_EXTERNALSECURE: "false"
+      ZITADEL_EXTERNALPORT: 8081
+      ZITADEL_EXTERNALDOMAIN: localhost
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./zitadel/steps.yaml:/etc/zitadel/steps.yaml:ro
+      - zitadel_shared_data:/zitadel-data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - auth-net
+
+  zitadel-bootstrap:
+    build:
+      context: ./zitadel/bootstrap
+      dockerfile: Dockerfile.bootstrap
+    container_name: zitadel-bootstrap
+    environment:
+      ZITADEL_INTERNAL_URL: "http://zitadel:8080"
+      PAT_FILE: "/zitadel-data/admin.pat"
+      CLIENT_ID_FILE: "/zitadel-data/client_id"
+    volumes:
+      - zitadel_shared_data:/zitadel-data
+    depends_on:
+      - zitadel
+    networks:
+      - auth-net
+
+  go-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+    container_name: go-backend
+    ports:
+      - "8080:8080"
+    networks:
+      - auth-net
+
+  kong:
+    image: kong:3.6
+    container_name: kong
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_UNTRUSTED_LUA: "on"
+    volumes:
+      - ./kong/kong.zitadel.yml:/usr/local/kong/declarative/kong.yml:ro
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    depends_on:
+      - go-backend
+    networks:
+      - auth-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    container_name: angular-frontend
+    ports:
+      - "4200:80"
+    networks:
+      - auth-net

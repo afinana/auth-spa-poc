@@ -120,10 +120,11 @@ curl -s http://localhost:8081/realms/auth-realm/protocol/openid-connect/certs | 
 
 ## 5. Key File Reference
 
-- [`src/app/auth.service.ts`](src/app/auth.service.ts): OAuth2/OIDC configuration, login/logout actions, and claim extraction.
+- [`src/app/auth.service.ts`](src/app/auth.service.ts): Dynamic multi-IdP OAuth2/OIDC configuration (Keycloak & ZITADEL), provider switching, token lifecycle, and universal claim extraction.
+- [`src/app/zitadel.service.ts`](src/app/zitadel.service.ts): ZITADEL-specific utilities, project roles assertion, and administrative console endpoints.
 - [`src/app/auth.interceptor.ts`](src/app/auth.interceptor.ts): HTTP Interceptor attaching Bearer token to API Gateway requests.
-- [`src/app/app.component.ts`](src/app/app.component.ts): Component managing authentication state, decoded claims display, and API test actions.
-- [`src/app/app.component.html`](src/app/app.component.html): Dashboard UI displaying user profile, active claims table, raw token view, and gateway endpoints.
+- [`src/app/app.component.ts`](src/app/app.component.ts): Component managing authentication state, IdP dropdown selection, decoded claims display, and API test actions.
+- [`src/app/app.component.html`](src/app/app.component.html): Dashboard UI displaying IdP selector, user profile, active claims table, raw token view, and gateway endpoints.
 
 ---
 
