@@ -11,4 +11,4 @@ This directory contains the declarative configuration files for **KrakenD API Ga
 
 For full architectural deep dives, Martian header modifiers, JWKS caching, and testing procedures, refer to:
 
-👉 **[KrakenD Implementation Guide](../KRAKEND-Implementation-Guide.md)**
+👉 **[KrakenD Implementation Guide](../docs/KRAKEND-Implementation-Guide.md)**

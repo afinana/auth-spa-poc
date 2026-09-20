@@ -11,4 +11,4 @@ This directory contains the declarative configuration files for **Kong API Gatew
 
 For full architectural deep dives, plugin configuration breakdowns, and testing procedures, refer to:
 
-👉 **[Kong Implementation Guide](../KONG-Implementation-Guide.md)**
+👉 **[Kong Implementation Guide](../docs/KONG-Implementation-Guide.md)**
