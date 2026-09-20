@@ -1,0 +1,148 @@
+{
+  "id": "auth-realm",
+  "realm": "auth-realm",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "Standard user role"
+      },
+      {
+        "name": "admin",
+        "description": "Administrator role"
+      }
+    ]
+  },
+  "components": {
+    "org.keycloak.keys.KeyProvider": [
+      {
+        "name": "rsa",
+        "providerId": "rsa",
+        "subComponents": {},
+        "config": {
+          "priority": ["100"],
+          "enabled": ["true"],
+          "active": ["true"],
+          "algorithm": ["RS256"],
+          "privateKey": [
+            "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDFoOIwBNVoOK6lSZl1PbZ8ba0HsCiJZ903UaDWGqGw5o7fGjzQ3FWrd8qj8EbBWhUqDxff5fiBM8uAS4VMHX8VnVZ+13UL0Rj5rhYb72MY5TQ4v/l83o7RHfu/eBSUTR6baD+Ab1+po1hz/GRXXaTUEBOVjO2tm5SUdQVUeIu6M4fi/qOrhcgHmKScUqZ7jiweMtyySM9cvUeUMx2yX+4NqrJbU6Mpc09QCLLMKv+x+oGZ+MnzU7mTjIvpf3x8nDwEYsAJD5Z3uKw2ad2X3430vhNschcAxZ6tlteBlclTyUwFU2pAi+Hx/20UHi+iji9xW/043MoqkuySntabtCD1AgMBAAECggEAHimsa/zI34PLMAH4MHsvR3Vr08EQpswZ6NAGFrdw1zGRO77i6lO+pZF+dZ/+BJOtqEIueCc+0uVnWVjtas0TsOZXJbvXquqKf80QpcnXG50b589xEhxbutHzMuluZqYQllKGYqFc/eSm4ujyHZ12w0EC5C/itL0Ko8/qdNaDKPNgdeexXdsLJabVCndDmPfi1dnh80fbWkamagzWHh3EF90kae0RK5IBtO69dNaI3SC+V1exoMV/kAO1vE7zQt9qSgky+SO6Fcl9x3o6+N+CbhurpcqNBavUXtFV+ieYn5KIn0tQgZsoJRL3RUABtlpgHi+q79z1dXM4pyhFXWHkrwKBgQD490h4KuneUGtPjjQdASV7G8nmtPMOTVPzgjfDAneo/kvnXuB/j774yYgBcRzt3mTi6/ZQ0WWdnk53W/ssF1RDWGLbpzYwmijyeDTd49ZJNWWs8mqcFQvvR0t9IYEaPrO3swa1VCFrYhaAUyFi8tb72YN6QCzcTfqdjwuthbzIewKBgQDLNkmVBgfhJkRCWfVHTMntMxIWp9gwQtDtKoHEfgdCHQtGHX3Y90hto1KM5UX/0TbcPjC4uIHACcmFR4N7AC6Qyefvr5jyjZrlPXiRNonX0WyzyHs4HaZCMBt/jN4jB6TFRg4B7IOaOI5aYObrAW8KhtGV29VGV1MQAXCR9ubZTwKBgQDFKyGLeYDpfYre4GHJLqU+UA2f1mI/S2JXESOUHxohDfOS8wKcQ30cjo5Vhf1BLMV9KR5TduIg58SApqnOi1NCWndAObai2xPeovBLYirMo6s4QmvH3Kss/qt8F9KktE+kBfYkGNK2tmHXkv533JYBsot7f+OHPYJi0WyQKcAOjQKBgFdgEUVtYWfyvzjUWz18C/rckbOCGdeucwz20PM+yTopKNbOCXWH5fGWXwFL98wmFfOfHe3fD5MV4jtXY3Y4vszss7iAhUANmQNmaffuPli4qIeo9SpMvVcKPliapkzjlXppQ86Z9oASP0snDUMQy8D39Rf9fPeQxptEMzXftqTLAoGBAM1FqaloJs5E+bC6S3zl8aAC8UykLLN3hgu125RqScum+KMqUwVYNmIkQSoE5KKLzYlh+VnhBJyiGZm0Nl+WzbQFQ8hRigl5M6Owz5jXLC8Xlz3VhjJAD7OJiCuSxi3ewv+pW8qSZthVZg0BN7pUYpG/CFIqJHpFtfrGPbGMU2a4"
+          ],
+          "certificate": [
+            "MIIDCzCCAfOgAwIBAgIUJZqXH36sM4xI2JLSGox1jwruqJAwDQYJKoZIhvcNAQELBQAwFTETMBEGA1UEAwwKYXV0aC1yZWFsbTAeFw0yNjA5MTkxNjAzMzhaFw0zNjA5MTYxNjAzMzhaMBUxEzARBgNVBAMMCmF1dGgtcmVhbG0wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDFoOIwBNVoOK6lSZl1PbZ8ba0HsCiJZ903UaDWGqGw5o7fGjzQ3FWrd8qj8EbBWhUqDxff5fiBM8uAS4VMHX8VnVZ+13UL0Rj5rhYb72MY5TQ4v/l83o7RHfu/eBSUTR6baD+Ab1+po1hz/GRXXaTUEBOVjO2tm5SUdQVUeIu6M4fi/qOrhcgHmKScUqZ7jiweMtyySM9cvUeUMx2yX+4NqrJbU6Mpc09QCLLMKv+x+oGZ+MnzU7mTjIvpf3x8nDwEYsAJD5Z3uKw2ad2X3430vhNschcAxZ6tlteBlclTyUwFU2pAi+Hx/20UHi+iji9xW/043MoqkuySntabtCD1AgMBAAGjUzBRMB0GA1UdDgQWBBR0otjC0TOk/F6GclDFeYf5qXuJwjAfBgNVHSMEGDAWgBR0otjC0TOk/F6GclDFeYf5qXuJwjAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQCPgMbO86i+subL4446hy4p6cE20KLV0m4xkYLd9sR7MUK8LsBVUvAFkrdVL2VRGaIUp0mgX9MDuwBKRJXoe+vt4iJTCZsP6288ZbY89FzxOYJKHM+nBYBqnNHtKMOrlS02WlMW356rIQoez6QFs7SSIAFaxlflaazG/N091cikkQYHa+a93vBhu2KXiC3W9Ob6vhzLNUxZHTy7vThA/HY4ZGKR7C4uwYDkWAjkWx09MOhtv6cDQ+psaoCh+rDTV+9AS0Jm4AoOlhGqzfmnIlsIz8KWfIB86OyrBWhMNIopbIlSy8pz0j7ybtAmYC63lA+Ro2+3wW7ktir0DkWg4vjA"
+          ]
+        }
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "alice",
+      "enabled": true,
+      "email": "alice@example.com",
+      "firstName": "Alice",
+      "lastName": "User",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "alice123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "email": "bob@example.com",
+      "firstName": "Bob",
+      "lastName": "Admin",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "bob123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin", "user"]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "angular-spa",
+      "name": "Angular SPA Client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "baseUrl": "http://localhost:4200",
+      "rootUrl": "http://localhost:4200",
+      "redirectUris": [
+        "http://localhost:4200/*",
+        "http://localhost:4200/index.html",
+        "http://localhost:4200"
+      ],
+      "webOrigins": [
+        "http://localhost:4200",
+        "+"
+      ],
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "username-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "email-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

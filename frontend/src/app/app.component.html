@@ -1,0 +1,315 @@
+<div class="layout-container">
+  <!-- Header -->
+  <header class="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-title">Aitana Auth Architecture</h1>
+        <p class="brand-subtitle">Contract-First Zero-Trust APIM Boundary PoC</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="system-status">
+        <span class="status-pill status-online">
+          <span class="dot"></span> Keycloak IdP (:8081)
+        </span>
+        <span class="status-pill status-online">
+          <span class="dot"></span> Kong PEP (:8000)
+        </span>
+        <span class="status-pill status-online">
+          <span class="dot"></span> Go Backend (:8080)
+        </span>
+      </div>
+
+      <div *ngIf="!isAuthenticated" class="auth-box">
+        <button id="btn-login" class="btn btn-primary" (click)="login()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+            <polyline points="10 17 15 12 10 7"/>
+            <line x1="15" y1="12" x2="3" y2="12"/>
+          </svg>
+          Login with Keycloak
+        </button>
+      </div>
+
+      <div *ngIf="isAuthenticated" class="auth-box user-logged-in">
+        <div class="user-avatar">
+          {{ (authService.getUsername() || 'U')[0].toUpperCase() }}
+        </div>
+        <div class="user-info">
+          <span class="user-name">{{ authService.getUsername() }}</span>
+          <span class="user-email">{{ authService.getEmail() }}</span>
+        </div>
+        <button id="btn-logout" class="btn btn-secondary btn-sm" (click)="logout()">
+          Logout
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Flow Diagram Card -->
+  <section class="card flow-card">
+    <div class="card-header">
+      <h2 class="card-title">Perimeter APIM & Token Offloading Architecture</h2>
+      <span class="badge badge-purple">Zero-Trust Active</span>
+    </div>
+    <div class="flow-steps">
+      <div class="flow-step" [class.step-active]="true">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Angular SPA</h4>
+          <p>OAuth 2.0 PKCE Code Flow with Keycloak</p>
+        </div>
+      </div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-step" [class.step-active]="isAuthenticated">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Keycloak IdP (:8081)</h4>
+          <p>Issues Signed JWT with Profile & Role Claims</p>
+        </div>
+      </div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-step" [class.step-active]="isAuthenticated">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Kong PEP Gateway (:8000)</h4>
+          <p>Validates JWT, Strips Token, Injects Anti-Spoofing Headers</p>
+        </div>
+      </div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-step" [class.step-active]="isAuthenticated">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h4>Go Microservice (:8080)</h4>
+          <p>Validates Boundary Assertions & Enforces RBAC</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pre-provisioned Demo Accounts Banner -->
+  <section class="demo-accounts-banner">
+    <div class="demo-badge">Test Accounts</div>
+    <div class="accounts-grid">
+      <div class="account-chip">
+        <strong>Standard User:</strong> <code>alice</code> / <code>alice123</code> <span class="badge badge-blue">Role: user</span>
+      </div>
+      <div class="account-chip">
+        <strong>Administrator:</strong> <code>bob</code> / <code>bob123</code> <span class="badge badge-amber">Role: admin, user</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Grid -->
+  <div class="main-grid">
+    <!-- Test Actions Panel -->
+    <div class="card action-card">
+      <div class="card-header">
+        <h2 class="card-title">Interactive APIM Test Suite</h2>
+        <span class="card-subtitle">Verify perimeter enforcement & zero-trust isolation</span>
+      </div>
+
+      <div class="actions-list">
+        <!-- Action 1: Kong Gateway Profile Call -->
+        <div class="action-item">
+          <div class="action-text">
+            <div class="action-header">
+              <span class="method-tag method-get">GET</span>
+              <span class="url-text">http://localhost:8000/api/profile</span>
+            </div>
+            <p class="action-desc">
+              Proxied through <strong>Kong PEP Gateway</strong>. Offloads JWT validation, strips <code>Authorization</code>, and injects trusted assertions:
+              <code>X-Gateway-Token</code>, <code>X-Enforcement-Point</code>, <code>X-User-Username</code>.
+            </p>
+          </div>
+          <button id="btn-call-gateway" class="btn btn-primary" [disabled]="loading || !isAuthenticated" (click)="callGatewayProfile()">
+            <span *ngIf="loading" class="spinner"></span>
+            Test Gateway API
+          </button>
+        </div>
+
+        <!-- Action 2: Kong Gateway RBAC Admin Call -->
+        <div class="action-item">
+          <div class="action-text">
+            <div class="action-header">
+              <span class="method-tag method-get">GET</span>
+              <span class="url-text">http://localhost:8000/api/admin</span>
+            </div>
+            <p class="action-desc">
+              Tests <strong>Role-Based Access Control (RBAC)</strong>. The Go backend enforces that <code>X-User-Role</code> contains <code>admin</code>.
+              (Allowed for <code>bob</code>, Forbidden for <code>alice</code>).
+            </p>
+          </div>
+          <button id="btn-call-admin" class="btn btn-warning" [disabled]="loading || !isAuthenticated" (click)="callGatewayAdmin()">
+            <span *ngIf="loading" class="spinner"></span>
+            Test Admin RBAC
+          </button>
+        </div>
+
+        <!-- Action 3: Direct Microservice Bypass -->
+        <div class="action-item action-bypass">
+          <div class="action-text">
+            <div class="action-header">
+              <span class="method-tag method-get">GET</span>
+              <span class="url-text">http://localhost:8080/api/profile</span>
+              <span class="badge badge-rose">Perimeter Bypass Test</span>
+            </div>
+            <p class="action-desc">
+              Attempts <strong>Direct Upstream Invocation</strong> bypassing Kong. The Go microservice detects missing gateway assertion headers and rejects with <strong>403 Forbidden</strong>.
+            </p>
+          </div>
+          <button id="btn-call-bypass" class="btn btn-danger" [disabled]="loading" (click)="callDirectBypass()">
+            <span *ngIf="loading" class="spinner"></span>
+            Test Direct Bypass
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="!isAuthenticated" class="notice-box">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>Authenticate via Keycloak above to unlock API gateway test actions with your personal signed token.</span>
+      </div>
+    </div>
+
+    <!-- Inspector & Console Panel -->
+    <div class="card inspector-card">
+      <div class="tabs-nav">
+        <button class="tab-btn" [class.tab-active]="activeTab === 'response'" (click)="activeTab = 'response'">
+          Live API Response
+          <span *ngIf="lastResult" class="tab-badge" [class.badge-success]="lastResult.success" [class.badge-danger]="!lastResult.success">
+            {{ lastResult.status }}
+          </span>
+        </button>
+        <button class="tab-btn" [class.tab-active]="activeTab === 'claims'" (click)="activeTab = 'claims'">
+          Token & Claims
+          <span *ngIf="claims" class="tab-badge badge-info">{{ roles.length }} roles</span>
+        </button>
+        <button class="tab-btn" [class.tab-active]="activeTab === 'overview'" (click)="activeTab = 'overview'">
+          Zero-Trust Guardrails
+        </button>
+      </div>
+
+      <!-- Tab Content: Live API Response -->
+      <div *ngIf="activeTab === 'response'" class="tab-pane">
+        <div *ngIf="!lastResult" class="empty-state">
+          <p>No API requests sent yet. Click any test action on the left to inspect gateway and backend responses.</p>
+        </div>
+
+        <div *ngIf="lastResult" class="response-container">
+          <div class="response-header">
+            <div class="status-summary">
+              <span class="status-indicator" [class.bg-emerald]="lastResult.success" [class.bg-rose]="!lastResult.success">
+                HTTP {{ lastResult.status }} {{ lastResult.statusText }}
+              </span>
+              <span class="latency-tag">{{ lastResult.timeMs }} ms</span>
+            </div>
+            <code class="endpoint-tag">{{ lastResult.method }} {{ lastResult.endpoint }}</code>
+          </div>
+
+          <div class="inspector-section">
+            <h4 class="section-label">Response Body</h4>
+            <pre class="code-viewer"><code>{{ getFormattedJson(lastResult.data) }}</code></pre>
+          </div>
+
+          <div *ngIf="lastResult.headers" class="inspector-section">
+            <h4 class="section-label">Response Headers</h4>
+            <div class="headers-table">
+              <div *ngFor="let item of lastResult.headers | keyvalue" class="header-row">
+                <span class="header-key">{{ item.key }}:</span>
+                <span class="header-val">{{ item.value }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content: Decoded Claims -->
+      <div *ngIf="activeTab === 'claims'" class="tab-pane">
+        <div *ngIf="!isAuthenticated" class="empty-state">
+          <p>No active session. Login with Keycloak to inspect decoded JWT payload claims and roles.</p>
+        </div>
+
+        <div *ngIf="isAuthenticated && claims" class="claims-container">
+          <div class="claims-summary-grid">
+            <div class="claim-card">
+              <span class="claim-label">Subject ID (sub)</span>
+              <span class="claim-val">{{ claims.sub }}</span>
+            </div>
+            <div class="claim-card">
+              <span class="claim-label">Username</span>
+              <span class="claim-val highlight">{{ claims.preferred_username || 'N/A' }}</span>
+            </div>
+            <div class="claim-card">
+              <span class="claim-label">Email</span>
+              <span class="claim-val highlight">{{ claims.email || 'N/A' }}</span>
+            </div>
+            <div class="claim-card">
+              <span class="claim-label">Assigned Roles</span>
+              <div class="roles-chips">
+                <span *ngFor="let r of roles" class="badge" [class.badge-amber]="r === 'admin'" [class.badge-blue]="r !== 'admin'">
+                  {{ r }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="inspector-section">
+            <h4 class="section-label">Full Decoded JWT Payload Claims</h4>
+            <pre class="code-viewer"><code>{{ getFormattedJson(claims) }}</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content: Zero-Trust Guardrails -->
+      <div *ngIf="activeTab === 'overview'" class="tab-pane">
+        <div class="guardrails-content">
+          <h3>Decoupled APIM Contract Specification</h3>
+          <p>
+            Under the <strong>Aitana Auth Architecture</strong>, downstream microservices are completely decoupled from identity provider protocols.
+          </p>
+
+          <div class="spec-table">
+            <div class="spec-row">
+              <div class="spec-col spec-badge badge-rose">Stripped by Kong</div>
+              <div class="spec-col"><code>Authorization: Bearer &lt;JWT&gt;</code></div>
+              <div class="spec-col desc">Prevents token leakage and offloads signature validation</div>
+            </div>
+            <div class="spec-row">
+              <div class="spec-col spec-badge badge-emerald">Injected by Kong</div>
+              <div class="spec-col"><code>X-Gateway-Token</code></div>
+              <div class="spec-col desc">Cryptographic secret asserting request origin from Kong PEP</div>
+            </div>
+            <div class="spec-row">
+              <div class="spec-col spec-badge badge-emerald">Injected by Kong</div>
+              <div class="spec-col"><code>X-Enforcement-Point</code></div>
+              <div class="spec-col desc">Asserts the specific perimeter policy boundary</div>
+            </div>
+            <div class="spec-row">
+              <div class="spec-col spec-badge badge-blue">Injected by Kong</div>
+              <div class="spec-col"><code>X-User-Username, X-User-Email, X-User-Role</code></div>
+              <div class="spec-col desc">Pre-validated identity claims converted to trusted headers</div>
+            </div>
+          </div>
+
+          <div class="defense-box">
+            <h4>Defense-in-Depth Guarantee:</h4>
+            <p>
+              Direct attempts to invoke the microservice bypass Kong (or forged headers from untrusted origins) are denied immediately with <strong>HTTP 403 Forbidden</strong> by Go's <code>AuthHeaderMiddleware</code>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
