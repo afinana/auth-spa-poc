@@ -1,4 +1,4 @@
-# Aitana Auth Architecture Proof-of-Concept (PoC)
+# Auth Architecture Proof-of-Concept (PoC)
 
 A contract-first, zero-trust APIM boundary architecture demonstrating the strict decoupling of user identity verification (**Keycloak** or **ZITADEL** IdP) from perimeter policy enforcement (**KrakenD**, **Kong**, or **Tyk** API Gateway PEP) and downstream business logic (**Go Microservice**), consumed by a modern **Angular 19 SPA**.
 
@@ -39,7 +39,7 @@ sequenceDiagram
   The gateway (**KrakenD**, **Kong**, or **Tyk**) operates as the perimeter Policy Enforcement Point (PEP). It offloads JWT verification, signature checking, and key validation from upstream services, stripping the raw `Authorization` header so downstream services never handle tokens.
 - **Trusted Header Injection & Anti-Spoofing Guardrails**:
   The gateway injects verified identity claims (`X-User-Username`, `X-User-Email`, `X-User-Role`) alongside boundary assertion headers:
-  - `X-Gateway-Token: aitana-poc-gateway-secret-token`
+  - `X-Gateway-Token: poc-gateway-secret-token`
   - `X-Enforcement-Point`: `KrakenD-APIM-Boundary`, `Kong-APIM-Boundary`, or `Tyk-APIM-Boundary`
 - **Zero-Trust Microservice Defense-in-Depth**:
   Downstream microservices remain completely decoupled from OAuth/OIDC mechanics. The Go backend's `AuthHeaderMiddleware` validates the presence and authenticity of boundary assertion headers before allowing requests through, rejecting unverified or bypassed requests with **HTTP 403 Forbidden**.
@@ -57,7 +57,7 @@ sequenceDiagram
 | **Angular 19 SPA** | Client Web App | [http://localhost:4200](http://localhost:4200) | *See Demo Users below* | *See Demo Users below* | PoC frontend client application |
 | **Kong Gateway** | Admin REST API | [http://localhost:8001](http://localhost:8001) | *None* | *None* | Declarative status & route inspection |
 | **KrakenD Gateway** | Health / Config | [http://localhost:8000/__health](http://localhost:8000/__health) | *None* | *None* | Stateless engine ([KrakenD Designer GUI](https://designer.krakend.io/)) |
-| **Tyk Gateway** | Gateway API | [http://localhost:8000/hello](http://localhost:8000/hello) | *None* | `aitana-tyk-secret-key-352d20ee67be` | Headless mode (via `x-tyk-authorization`) |
+| **Tyk Gateway** | Gateway API | [http://localhost:8000/hello](http://localhost:8000/hello) | *None* | `tyk-secret-key-352d20ee67be` | Headless mode (via `x-tyk-authorization`) |
 | **Keycloak DB** | PostgreSQL | `localhost:5432` (`postgres:5432`) | `keycloak` | `keycloak_pass` | Keycloak persistence database (`keycloak`) |
 | **ZITADEL DB** | PostgreSQL | `localhost:5432` (`zitadel-postgres:5432`) | `zitadel` | `zitadel_pass` | ZITADEL persistence database (`zitadel`) |
 
@@ -112,8 +112,8 @@ Manage organizations, projects, applications, and users at [http://localhost:808
 | **Kong Admin API** | `http://localhost:8001` | Declarative configuration and status endpoint (Kong stack) |
 | **Tyk Proxy Endpoint** | `http://localhost:8000` | Tyk gateway entrypoint for API calls |
 | **Tyk Health / Hello Check** | `http://localhost:8000/hello` | Gateway liveness endpoint |
-| **Tyk Gateway Secret** | `aitana-tyk-secret-key-352d20ee67be` | Tyk API header secret (`x-tyk-authorization`) |
-| **Boundary Gateway Secret** | `aitana-poc-gateway-secret-token` | Injected as `X-Gateway-Token`, validated by Go microservice |
+| **Tyk Gateway Secret** | `tyk-secret-key-352d20ee67be` | Tyk API header secret (`x-tyk-authorization`) |
+| **Boundary Gateway Secret** | `poc-gateway-secret-token` | Injected as `X-Gateway-Token`, validated by Go microservice |
 | **KrakenD Enforcement Point**| `KrakenD-APIM-Boundary` | Injected as `X-Enforcement-Point` by KrakenD, validated by Go microservice |
 | **Kong Enforcement Point** | `Kong-APIM-Boundary` | Injected as `X-Enforcement-Point` by Kong, validated by Go microservice |
 | **Tyk Enforcement Point** | `Tyk-APIM-Boundary` | Injected as `X-Enforcement-Point` by Tyk, validated by Go microservice |
