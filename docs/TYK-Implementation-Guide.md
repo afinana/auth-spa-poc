@@ -1,6 +1,6 @@
 # Tyk API Gateway Implementation Guide
 
-This guide provides a comprehensive technical specification of **Tyk Gateway (v5.3)** deployed as the perimeter Policy Enforcement Point (PEP) in the Aitana Auth Architecture. It details headless open-source configuration, Redis-backed session management, cryptographic JWT validation, and JavaScript Virtual Machine (JSVM) middleware for claim transformation and anti-spoofing injection.
+This guide provides a comprehensive technical specification of **Tyk Gateway (v5.3)** deployed as the perimeter Policy Enforcement Point (PEP) in the Project Auth Architecture. It details headless open-source configuration, Redis-backed session management, cryptographic JWT validation, and JavaScript Virtual Machine (JSVM) middleware for claim transformation and anti-spoofing injection.
 
 ---
 
