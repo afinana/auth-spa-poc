@@ -21,7 +21,7 @@ export interface IdpConfig {
 export const IDP_CONFIGS: Record<IdpType, IdpConfig> = {
   keycloak: {
     id: 'keycloak',
-    name: 'Keycloak IdP',
+    name: 'Keycloak',
     issuer: 'http://localhost:8081/realms/auth-realm',
     clientId: 'angular-spa',
     scope: 'openid profile email roles',
@@ -34,7 +34,7 @@ export const IDP_CONFIGS: Record<IdpType, IdpConfig> = {
   },
   zitadel: {
     id: 'zitadel',
-    name: 'ZITADEL IdP',
+    name: 'ZITADEL',
     issuer: 'http://localhost:8081',
     // Zitadel Angular SPA client id; direct integration without adapter
     clientId: '391627259401797638',

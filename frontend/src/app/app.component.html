@@ -29,8 +29,8 @@
             (ngModelChange)="onIdpChange($event)"
             [disabled]="loading"
           >
-            <option value="keycloak">Keycloak IdP (OAuth 2.0 PKCE)</option>
-            <option value="zitadel">ZITADEL IdP (Native OIDC)</option>
+            <option value="keycloak">Keycloak (OAuth 2.0 PKCE)</option>
+            <option value="zitadel">ZITADEL (Native OIDC)</option>
           </select>
         </div>
       </div>
@@ -40,7 +40,7 @@
           <span class="dot"></span> {{ idpConfigs[selectedIdp].name }} (:8081)
         </span>
         <span class="status-pill status-online">
-          <span class="dot"></span> Kong PEP (:8000)
+          <span class="dot"></span> PEP Gateway (:8000)
         </span>
         <span class="status-pill status-online">
           <span class="dot"></span> Go Backend (:8080)
@@ -77,7 +77,10 @@
   <section class="card flow-card">
     <div class="card-header">
       <h2 class="card-title">Perimeter APIM & Token Offloading Architecture</h2>
-      <span class="badge badge-purple">Active IdP: {{ idpConfigs[selectedIdp].name }}</span>
+      <div class="active-boundaries">
+        <span class="badge badge-purple">Active IdP: {{ idpConfigs[selectedIdp].name }}</span>
+        <span class="badge badge-purple">Active GW: {{ activeGateway }}</span>
+      </div>
     </div>
     <div class="flow-steps">
       <div class="flow-step" [class.step-active]="true">
@@ -99,7 +102,7 @@
       <div class="flow-step" [class.step-active]="isAuthenticated">
         <div class="step-num">3</div>
         <div class="step-content">
-          <h4>Kong PEP Gateway (:8000)</h4>
+          <h4>PEP Gateway (:8000)</h4>
           <p>Validates JWT, Strips Token, Injects Anti-Spoofing Headers</p>
         </div>
       </div>
@@ -143,7 +146,7 @@
       </div>
 
       <div class="actions-list">
-        <!-- Action 1: Kong Gateway Profile Call -->
+        <!-- Action 1: PEP Gateway Profile Call -->
         <div class="action-item">
           <div class="action-text">
             <div class="action-header">
@@ -151,7 +154,7 @@
               <span class="url-text">http://localhost:8000/api/profile</span>
             </div>
             <p class="action-desc">
-              Proxied through <strong>Kong PEP Gateway</strong>. Offloads JWT validation, strips <code>Authorization</code>, and injects trusted assertions:
+              Proxied through the <strong>PEP Gateway</strong>. Offloads JWT validation, strips <code>Authorization</code>, and injects trusted assertions:
               <code>X-Gateway-Token</code>, <code>X-Enforcement-Point</code>, <code>X-User-Username</code>.
             </p>
           </div>
@@ -161,7 +164,7 @@
           </button>
         </div>
 
-        <!-- Action 2: Kong Gateway RBAC Admin Call -->
+        <!-- Action 2: PEP Gateway RBAC Admin Call -->
         <div class="action-item">
           <div class="action-text">
             <div class="action-header">
@@ -188,7 +191,7 @@
               <span class="badge badge-rose">Perimeter Bypass Test</span>
             </div>
             <p class="action-desc">
-              Attempts <strong>Direct Upstream Invocation</strong> bypassing Kong. The Go microservice detects missing gateway assertion headers and rejects with <strong>403 Forbidden</strong>.
+              Attempts <strong>Direct Upstream Invocation</strong> bypassing the PEP Gateway. The Go microservice detects missing gateway assertion headers and rejects with <strong>403 Forbidden</strong>.
             </p>
           </div>
           <button id="btn-call-bypass" class="btn btn-danger" [disabled]="loading" (click)="callDirectBypass()">
@@ -285,7 +288,7 @@
               <span class="claim-val highlight">{{ claims.email || 'N/A' }}</span>
             </div>
             <div class="claim-card" style="grid-column: 1 / -1;">
-              <span class="claim-label">Assigned Roles (Resolved across Keycloak & ZITADEL specifications)</span>
+              <span class="claim-label">Assigned Roles (Resolved from supported IdP claim formats)</span>
               <div class="roles-chips">
                 <span *ngFor="let r of roles" class="badge" [class.badge-amber]="r === 'admin'" [class.badge-blue]="r !== 'admin'">
                   {{ r }}
@@ -307,27 +310,27 @@
         <div class="guardrails-content">
           <h3>Decoupled APIM Contract Specification</h3>
           <p>
-            Under the <strong>Project Auth Architecture</strong>, downstream microservices are completely decoupled from identity provider protocols. Both Keycloak and ZITADEL integrate seamlessly without modifying the Go backend.
+            Under the <strong>Project Auth Architecture</strong>, downstream microservices are completely decoupled from identity provider protocols. Different identity providers integrate without modifying the Go backend.
           </p>
 
           <div class="spec-table">
             <div class="spec-row">
-              <div class="spec-col spec-badge badge-rose">Stripped by Kong</div>
+              <div class="spec-col spec-badge badge-rose">Stripped by PEP Gateway</div>
               <div class="spec-col"><code>Authorization: Bearer &lt;JWT&gt;</code></div>
               <div class="spec-col desc">Prevents token leakage and offloads signature validation</div>
             </div>
             <div class="spec-row">
-              <div class="spec-col spec-badge badge-emerald">Injected by Kong</div>
+              <div class="spec-col spec-badge badge-emerald">Injected by PEP Gateway</div>
               <div class="spec-col"><code>X-Gateway-Token</code></div>
-              <div class="spec-col desc">Cryptographic secret asserting request origin from Kong PEP</div>
+              <div class="spec-col desc">Cryptographic secret asserting request origin from the PEP Gateway</div>
             </div>
             <div class="spec-row">
-              <div class="spec-col spec-badge badge-emerald">Injected by Kong</div>
+              <div class="spec-col spec-badge badge-emerald">Injected by PEP Gateway</div>
               <div class="spec-col"><code>X-Enforcement-Point</code></div>
               <div class="spec-col desc">Asserts the specific perimeter policy boundary</div>
             </div>
             <div class="spec-row">
-              <div class="spec-col spec-badge badge-blue">Injected by Kong</div>
+              <div class="spec-col spec-badge badge-blue">Injected by PEP Gateway</div>
               <div class="spec-col"><code>X-User-Username, X-User-Email, X-User-Role</code></div>
               <div class="spec-col desc">Pre-validated identity claims converted to trusted headers</div>
             </div>
@@ -336,7 +339,7 @@
           <div class="defense-box">
             <h4>Defense-in-Depth Guarantee:</h4>
             <p>
-              Direct attempts to invoke the microservice bypass Kong (or forged headers from untrusted origins) are denied immediately with <strong>HTTP 403 Forbidden</strong> by Go's <code>AuthHeaderMiddleware</code>.
+              Direct attempts to invoke the microservice bypassing the PEP Gateway (or forged headers from untrusted origins) are denied immediately with <strong>HTTP 403 Forbidden</strong> by Go's <code>AuthHeaderMiddleware</code>.
             </p>
           </div>
         </div>

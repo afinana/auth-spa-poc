@@ -1,13 +1,13 @@
 # Frontend Single Page Application (Angular 19) - Auth POC
 
-This Angular application serves as the user-facing client in the Zero-Trust Architecture Proof of Concept (PoC). It implements **OAuth 2.0 Authorization Code Flow with PKCE**, processes and displays **JWT claims**, and dispatches authenticated requests to the **Kong API Gateway (PEP)**.
+This Angular application serves as the user-facing client in the Zero-Trust Architecture Proof of Concept (PoC). It supports **Keycloak** and **ZITADEL** as identity providers, implements **OAuth 2.0 Authorization Code Flow with PKCE**, displays decoded JWT claims, and dispatches authenticated requests to the **PEP Gateway**.
 
 ---
 
 ## 1. Architecture & Authentication Flow
 
 ```
-[Keycloak (Port 8081)]
+[Keycloak or ZITADEL (Port 8081)]
        ▲
        │ 1. Authorization Code Flow with PKCE
        ▼
@@ -15,16 +15,16 @@ This Angular application serves as the user-facing client in the Zero-Trust Arch
        │
        │ 3. Attaches "Authorization: Bearer <token>"
        ▼
-[Kong PEP Gateway (Port 8000)] ── 4. Cryptographic Validation via JWKS
+[PEP Gateway (Port 8000)] ── 4. Cryptographic Validation via JWKS
        │
        ▼
 [Go Backend Microservice (Port 8080)]
 ```
 
-1. **User Authentication:** The frontend initiates the login flow via Keycloak (`angular-spa` public client).
-2. **Token Exchange:** Upon successful authentication, Keycloak issues an Access Token (JWT), ID Token, and Refresh Token.
+1. **User Authentication:** The frontend initiates login with the selected identity provider using its configured OIDC client.
+2. **Token Exchange:** Upon successful authentication, the selected provider issues tokens, including an Access Token (JWT).
 3. **Client-Side Claim Inspection:** The Angular app decodes the access token payload to customize the UI.
-4. **Secured API Invocations:** The HTTP interceptor injects the Bearer token into outgoing requests destined for the Kong API Gateway (`http://localhost:8000`).
+4. **Secured API Invocations:** The HTTP interceptor injects the Bearer token into outgoing requests destined for the PEP Gateway (`http://localhost:8000`).
 
 ---
 
@@ -64,7 +64,7 @@ In `src/app/app.component.ts`:
 - **Role-Based UI:** `getRoles()` parses `claims['roles']` or `claims['realm_access']['roles']` to conditionally display UI tabs, admin actions, and authorization controls.
 
 ### Automatic Token Injection (`AuthInterceptor`)
-In `src/app/auth.interceptor.ts`, an Angular `HttpInterceptor` intercepts requests targeting Kong Gateway (`http://localhost:8000`) and attaches the Bearer token:
+In `src/app/auth.interceptor.ts`, an Angular `HttpInterceptor` intercepts requests targeting PEP Gateway (`http://localhost:8000`) and attaches the Bearer token:
 
 ```typescript
 if (req.url.startsWith('http://localhost:8000')) {
@@ -87,8 +87,12 @@ It is critical to distinguish between **client-side verification** and **cryptog
 | Validation Layer | Checks Performed | Mechanism | Cryptographically Trustworthy? |
 | :--- | :--- | :--- | :--- |
 | **Frontend App** (`AuthService`) | Token existence & expiration (`exp`) | `this.oauthService.hasValidAccessToken()` verifies `exp * 1000 > Date.now()` | ❌ **No.** Only used for UX/state management; client memory can be altered in DevTools. |
-| **Kong PEP Gateway** (`:8000`) | Signature, Issuer (`iss`), Audience (`aud`), Expiry (`exp`) | Validates cryptographic signature against Keycloak's public keys (`/protocol/openid-connect/certs`) | ✅ **Yes.** Protects internal network and enforces Zero Trust boundary. |
-| **Go Backend** (`:8080`) | Context headers / direct token check | Checks gateway-injected identity headers (`X-User`, `X-Roles`) or validates token | ✅ **Yes.** Acts as Policy Decision/Enforcement Point. |
+| **PEP Gateway** (`:8000`) | Signature, issuer (`iss`), audience (`aud`), expiry (`exp`) | Validates the access token against the selected IdP's signing keys | ✅ **Yes.** Protects the upstream service and enforces the perimeter boundary. |
+| **Go Backend** (`:8080`) | Trusted gateway assertions and endpoint authorization | Verifies gateway and user-context headers; `/api/admin` additionally requires the `admin` role | ✅ **Yes.** Rejects direct upstream access and enforces admin-only authorization. |
+
+### Role-based endpoint access
+
+The PEP Gateway validates bearer tokens for protected API routes and maps validated identity and roles into trusted headers. The backend's `AuthHeaderMiddleware` verifies those gateway assertions for `/api/*` requests. `ProfileHandler` returns the authenticated user's profile; `AdminHandler` permits `/api/admin` only when `X-User-Role` contains the `admin` role, otherwise returning `403 Forbidden`. The frontend's test buttons are for demonstration only and are not the access-control boundary.
 
 ---
 
@@ -142,4 +146,4 @@ npm install
 # Start development server
 ng serve --port 4200
 ```
-Navigate to `http://localhost:4200`. Ensure Keycloak (`:8081`) and Kong Gateway (`:8000`) are running via `docker-compose up -d`.
+Navigate to `http://localhost:4200`. From the repository root, start the APISIX demo stack with `docker compose -f docker-compose.apisix.yml up -d --build`. The GUI displays the selected identity provider (Keycloak or ZITADEL) and labels the active boundary generically as the PEP Gateway.

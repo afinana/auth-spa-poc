@@ -10,8 +10,8 @@ export class AuthInterceptor implements HttpInterceptor {
   constructor(private injector: Injector) {}
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    // Only attach bearer token to requests destined for the Kong API Gateway (:8000)
-    // This breaks the DI circular dependency because OAuthService requests to Keycloak (:8081) bypass injection
+    // Only attach bearer tokens to requests destined for the API gateway (:8000).
+    // Identity-provider traffic bypasses injection.
     if (req.url.startsWith('http://localhost:8000')) {
       if (!this.oauthService) {
         this.oauthService = this.injector.get(OAuthService);

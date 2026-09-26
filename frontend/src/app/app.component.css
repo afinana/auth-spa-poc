@@ -207,6 +207,13 @@
   color: var(--text-muted);
 }
 
+.active-boundaries {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 /* Flow Card */
 .flow-card {
   margin-bottom: 1.5rem;

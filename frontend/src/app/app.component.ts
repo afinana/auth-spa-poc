@@ -36,6 +36,7 @@ export class AppComponent implements OnInit {
 
   public selectedIdp: IdpType = 'keycloak';
   public idpConfigs = IDP_CONFIGS;
+  public activeGateway = 'PEP Gateway';
 
   constructor(
     public authService: AuthService,
@@ -79,12 +80,12 @@ export class AppComponent implements OnInit {
     this.lastResult = null;
   }
 
-  // 1. Call via Kong PEP Gateway (Port 8000)
+  // 1. Call via PEP Gateway (Port 8000)
   public callGatewayProfile(): void {
     this.executeRequest('GET', 'http://localhost:8000/api/profile');
   }
 
-  // 2. Call Admin Endpoint via Kong PEP Gateway (Port 8000)
+  // 2. Call Admin Endpoint via PEP Gateway (Port 8000)
   public callGatewayAdmin(): void {
     this.executeRequest('GET', 'http://localhost:8000/api/admin');
   }
