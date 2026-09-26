@@ -24,7 +24,7 @@ interface ApiResult {
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
-  public title = 'Aitana Auth Architecture PoC';
+  public title = 'Project Auth Architecture PoC';
   public isAuthenticated = false;
   public claims: DecodedClaims | null = null;
   public roles: string[] = [];

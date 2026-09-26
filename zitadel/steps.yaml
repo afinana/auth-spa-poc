@@ -1,12 +1,12 @@
 FirstInstance:
-  InstanceName: "Aitana"
+  InstanceName: "Project"
   DefaultLanguage: "en"
   PatPath: "/zitadel-data/admin.pat"
   Org:
-    Name: "Aitana"
+    Name: "Project"
     Human:
       UserName: "admin"
-      FirstName: "Aitana"
+      FirstName: "Project"
       LastName: "Admin"
       Email:
         Address: "admin@localhost"

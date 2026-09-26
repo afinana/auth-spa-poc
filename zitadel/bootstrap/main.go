@@ -452,7 +452,7 @@ func generateKongYAML(rsaPEM string) string {
 	return fmt.Sprintf(`_format_version: "3.0"
 
 consumers:
-  - username: aitana-client
+  - username: project-client
     jwt_secrets:
       - key: "http://localhost:8081"
         algorithm: "RS256"
@@ -560,7 +560,7 @@ services:
                       end
                     end
                   end
-                  kong.service.request.set_header("X-Gateway-Token", "aitana-poc-gateway-secret-token")
+                  kong.service.request.set_header("X-Gateway-Token", "project-poc-gateway-secret-token")
                   kong.service.request.set_header("X-Enforcement-Point", "Kong-APIM-Boundary")
                   kong.service.request.clear_header("authorization")
 `, indentedPEM, indentedPEM)

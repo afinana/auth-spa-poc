@@ -1,10 +1,10 @@
-# **Aitana Auth Architecture Implementation Guide**
+# **Project Auth Architecture Implementation Guide**
 
 ## **1\. Executive Summary & Architectural Overview**
 
 &nbsp;
 
-This specification defines the production-grade Proof of Concept (PoC) enterprise software architecture for **Aitana Auth**. Built around a contract-first, zero-trust APIM boundary architecture, the design strictly decouples user identity verification (AuthN) from access policy enforcement (AuthZ). **Keycloak** (or ZITADEL) serves as the centralized Identity Provider (IdP), while an interchangeable Policy Enforcement Point (PEP) gateway—supporting **Kong Gateway**, **KrakenD Gateway**, or **Tyk Gateway**—enforces perimeter security. Downstream microservices, such as the Go backend, remain completely agnostic to OAuth 2.0 protocol mechanics and JWT validation logic, relying exclusively on pre-validated user contexts and boundary assertion headers.
+This specification defines the production-grade Proof of Concept (PoC) enterprise software architecture for **Project Auth**. Built around a contract-first, zero-trust APIM boundary architecture, the design strictly decouples user identity verification (AuthN) from access policy enforcement (AuthZ). **Keycloak** (or ZITADEL) serves as the centralized Identity Provider (IdP), while an interchangeable Policy Enforcement Point (PEP) gateway—supporting **Kong Gateway**, **KrakenD Gateway**, or **Tyk Gateway**—enforces perimeter security. Downstream microservices, such as the Go backend, remain completely agnostic to OAuth 2.0 protocol mechanics and JWT validation logic, relying exclusively on pre-validated user contexts and boundary assertion headers.
 
 &nbsp;
 
@@ -117,7 +117,7 @@ To achieve zero-touch configuration during local demonstration, export these con
 
 ## **5\. API Gateway (PEP Boundary) Implementations**
 
-The Aitana Auth architecture supports interchangeable Policy Enforcement Point (PEP) gateways. Each gateway runs on external port `8000`, enforces CORS for the Angular SPA (`http://localhost:4200`), validates RS256 JWT access tokens issued by Keycloak, strips external `Authorization` headers, and injects validated user identity (`X-User-*`) and anti-spoofing assertion headers (`X-Gateway-Token`, `X-Enforcement-Point`).
+The Project Auth architecture supports interchangeable Policy Enforcement Point (PEP) gateways. Each gateway runs on external port `8000`, enforces CORS for the Angular SPA (`http://localhost:4200`), validates RS256 JWT access tokens issued by Keycloak, strips external `Authorization` headers, and injects validated user identity (`X-User-*`) and anti-spoofing assertion headers (`X-Gateway-Token`, `X-Enforcement-Point`).
 
 ---
 
@@ -130,7 +130,7 @@ The Aitana Auth architecture supports interchangeable Policy Enforcement Point (
 * **Header Injection:** Custom Lua script executed via the `post-function` plugin during the `access` phase:
   - Parses the JWT using `kong.plugins.jwt.jwt_parser`.
   - Sets `X-User-Username`, `X-User-Email`, and `X-User-Role`.
-  - Injects `X-Gateway-Token: aitana-poc-gateway-secret-token` and `X-Enforcement-Point: Kong-APIM-Boundary`.
+  - Injects `X-Gateway-Token: project-poc-gateway-secret-token` and `X-Enforcement-Point: Kong-APIM-Boundary`.
   - Clears `Authorization` before proxying to `http://go-backend:8080`.
 * **Dedicated Guide:** 👉 [Kong Implementation Guide](KONG-Implementation-Guide.md)
 
@@ -144,7 +144,7 @@ The Aitana Auth architecture supports interchangeable Policy Enforcement Point (
 * **Token Validation:** Uses the `auth/validator` component connecting to Keycloak's dynamic JWKS endpoint (`http://keycloak:8080/realms/auth-realm/protocol/openid-connect/certs`) with automatic key caching.
 * **Header Injection:**
   - `propagate_claims`: Maps `preferred_username` to `X-User-Username`, `email` to `X-User-Email`, and `roles` to `X-User-Role`.
-  - `modifier/martian`: Injects `X-Gateway-Token: aitana-poc-gateway-secret-token` and `X-Enforcement-Point: KrakenD-APIM-Boundary`.
+  - `modifier/martian`: Injects `X-Gateway-Token: project-poc-gateway-secret-token` and `X-Enforcement-Point: KrakenD-APIM-Boundary`.
 * **Dedicated Guide:** 👉 [KrakenD Implementation Guide](KRAKEND-Implementation-Guide.md)
 
 ---
@@ -158,7 +158,7 @@ The Aitana Auth architecture supports interchangeable Policy Enforcement Point (
 * **Header Injection:** JavaScript middleware (`tyk/middleware/auth-transform.js`) executing in the `post` authentication phase:
   - Decodes validated token payload using `b64dec`.
   - Injects `X-User-Username`, `X-User-Email`, and `X-User-Role`.
-  - Injects `X-Gateway-Token: aitana-poc-gateway-secret-token` and `X-Enforcement-Point: Tyk-APIM-Boundary`.
+  - Injects `X-Gateway-Token: project-poc-gateway-secret-token` and `X-Enforcement-Point: Tyk-APIM-Boundary`.
   - Strips incoming `Authorization` header.
 * **Dedicated Guide:** 👉 [Tyk Implementation Guide](TYK-Implementation-Guide.md)
 
@@ -270,7 +270,7 @@ type userContextKey string
 const userCtxKey userContextKey = "user_identity"
 
 const (
-	ExpectedGatewayToken           = "aitana-poc-gateway-secret-token"
+	ExpectedGatewayToken           = "project-poc-gateway-secret-token"
 	ExpectedEnforcementPointKong   = "Kong-APIM-Boundary"
 	ExpectedEnforcementPointKraken = "KrakenD-APIM-Boundary"
 	ExpectedEnforcementPointTyk    = "Tyk-APIM-Boundary"
@@ -600,8 +600,8 @@ To execute and validate this PoC using Gemini CLI or automated tooling, run the 
 
 ```shell
 # 1. Clone repository and set up directory structure
-mkdir -p aitana-auth-poc/{backend,frontend,kong}
-cd aitana-auth-poc
+mkdir -p project-auth-poc/{backend,frontend,kong}
+cd project-auth-poc
 
 # 2. Build and start local docker-compose environment
 docker-compose up -d --build

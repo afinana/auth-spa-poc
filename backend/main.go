@@ -16,7 +16,7 @@ type userContextKey string
 const userCtxKey userContextKey = "user_identity"
 
 const (
-	ExpectedGatewayToken           = "aitana-poc-gateway-secret-token"
+	ExpectedGatewayToken           = "project-poc-gateway-secret-token"
 	ExpectedEnforcementPointKong   = "Kong-APIM-Boundary"
 	ExpectedEnforcementPointKraken = "KrakenD-APIM-Boundary"
 	ExpectedEnforcementPointTyk    = "Tyk-APIM-Boundary"
@@ -181,7 +181,7 @@ func main() {
 
 	handler := SetupRoutes()
 	addr := ":" + port
-	log.Printf("Starting Aitana Go microservice on port %s...", port)
+	log.Printf("Starting Project Go microservice on port %s...", port)
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}

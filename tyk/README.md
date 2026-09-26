@@ -23,7 +23,7 @@ tyk/
 3. **JWT Authentication**: Enforces RS256 JWT signature verification using the RSA public key issued by Keycloak (`auth-realm`).
 4. **JavaScript Middleware (`auth-transform.js`)**:
    - Injects mandatory anti-spoofing gateway headers:
-     - `X-Gateway-Token: aitana-poc-gateway-secret-token`
+     - `X-Gateway-Token: project-poc-gateway-secret-token`
      - `X-Enforcement-Point: Tyk-APIM-Boundary`
    - Decodes JWT claims to propagate user context downstream:
      - `X-User-Username`: Keycloak `preferred_username` or `sub`

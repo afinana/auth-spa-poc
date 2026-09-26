@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.krakend.io/schema/v2.7/krakend.json",
   "version": 3,
-  "name": "Aitana API Gateway (KrakenD - ZITADEL)",
+  "name": "Project API Gateway (KrakenD - ZITADEL)",
   "port": 8000,
   "timeout": "3000ms",
   "cache_ttl": "300s",
@@ -73,7 +73,7 @@
                     "header.Modifier": {
                       "scope": ["request"],
                       "name": "X-Gateway-Token",
-                      "value": "aitana-poc-gateway-secret-token"
+                      "value": "project-poc-gateway-secret-token"
                     }
                   },
                   {
@@ -129,7 +129,7 @@
                     "header.Modifier": {
                       "scope": ["request"],
                       "name": "X-Gateway-Token",
-                      "value": "aitana-poc-gateway-secret-token"
+                      "value": "project-poc-gateway-secret-token"
                     }
                   },
                   {

@@ -37,7 +37,7 @@ Tyk Gateway operates in **headless mode** without requiring the Tyk Dashboard or
                    v
 +---------------------------------------------------------------------------------+
 | Go Microservice Backend (:8080)                                                 |
-| - Validates: X-Gateway-Token == "aitana-poc-gateway-secret-token"               |
+| - Validates: X-Gateway-Token == "project-poc-gateway-secret-token"               |
 | - Validates: X-Enforcement-Point == "Tyk-APIM-Boundary"                         |
 | - Resolves: X-User-Username, X-User-Email, X-User-Role                           |
 +---------------------------------------------------------------------------------+
@@ -65,7 +65,7 @@ tyk/
 ```json
 {
   "listen_port": 8000,
-  "secret": "aitana-tyk-secret-key-352d20ee67be",
+  "secret": "project-tyk-secret-key-352d20ee67be",
   "template_path": "/opt/tyk-gateway/templates",
   "app_path": "/opt/tyk-gateway/apps",
   "middleware_path": "/opt/tyk-gateway/middleware",
@@ -108,7 +108,7 @@ Tyk requires authenticated keys to map to a valid policy record:
     "access_rights": {
       "backend-api": {
         "api_id": "backend-api",
-        "api_name": "Aitana Backend API",
+        "api_name": "Project Backend API",
         "versions": ["Default"],
         "allowed_urls": []
       }
@@ -123,7 +123,7 @@ Tyk requires authenticated keys to map to a valid policy record:
 
 ```json
 {
-  "name": "Aitana Backend API",
+  "name": "Project Backend API",
   "api_id": "backend-api",
   "org_id": "default",
   "use_keyless": false,
@@ -184,7 +184,7 @@ var authTransformMiddleware = new TykJS.TykMiddleware.NewMiddleware({});
 
 authTransformMiddleware.NewProcessRequest(function(request, session) {
   // 1. Mandatory zero-trust APIM boundary security headers
-  request.SetHeaders["X-Gateway-Token"] = "aitana-poc-gateway-secret-token";
+  request.SetHeaders["X-Gateway-Token"] = "project-poc-gateway-secret-token";
   request.SetHeaders["X-Enforcement-Point"] = "Tyk-APIM-Boundary";
 
   // 2. Extract and decode Bearer JWT to populate downstream identity headers
@@ -227,7 +227,7 @@ authTransformMiddleware.NewProcessRequest(function(request, session) {
           request.SetHeaders["X-User-Role"] = roleStr;
         }
       } catch (err) {
-        log("[Aitana Auth Transform] Error decoding JWT claims: " + err);
+        log("[Project Auth Transform] Error decoding JWT claims: " + err);
       }
     }
   }

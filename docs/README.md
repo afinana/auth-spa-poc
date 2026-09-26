@@ -33,7 +33,7 @@ The core pattern implemented across this repository enforces a **Zero-Trust Back
 [ API Gateway PEP (Port 8000: Kong / KrakenD / Tyk) ]
          │
          │  3. Validates Signature & Injects Secure Headers
-         │     - X-Gateway-Token: aitana-poc-gateway-secret-token
+         │     - X-Gateway-Token: project-poc-gateway-secret-token
          │     - X-Enforcement-Point: <Gateway-Specific-Identifier>
          │     - X-User-Username, X-User-Email, X-User-Role
          │  4. Strips raw client Authorization header

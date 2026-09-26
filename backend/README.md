@@ -43,7 +43,7 @@ The microservice never accepts unverified requests. Upstream requests forwarded 
 ### Gateway Security Headers (Anti-Spoofing)
 | Header | Expected Value | Purpose |
 | :--- | :--- | :--- |
-| `X-Gateway-Token` | `aitana-poc-gateway-secret-token` | Proves request passed through the authenticated gateway boundary |
+| `X-Gateway-Token` | `project-poc-gateway-secret-token` | Proves request passed through the authenticated gateway boundary |
 | `X-Enforcement-Point` | `Kong-APIM-Boundary` | Confirms PEP origin |
 
 If either header is missing or incorrect, `AuthHeaderMiddleware` logs a security warning and immediately returns **`403 Forbidden: Untrusted gateway boundary`**.
@@ -129,7 +129,7 @@ curl -i http://localhost:8080/api/profile
 #### 2. Test Missing User Identity (Expect 401 Unauthorized)
 ```bash
 curl -i \
-  -H "X-Gateway-Token: aitana-poc-gateway-secret-token" \
+  -H "X-Gateway-Token: project-poc-gateway-secret-token" \
   -H "X-Enforcement-Point: Kong-APIM-Boundary" \
   http://localhost:8080/api/profile
 # Output: HTTP/1.1 401 Unauthorized: Missing user context

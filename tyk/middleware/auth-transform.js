@@ -2,7 +2,7 @@ var authTransformMiddleware = new TykJS.TykMiddleware.NewMiddleware({});
 
 authTransformMiddleware.NewProcessRequest(function(request, session) {
   // 1. Mandatory zero-trust APIM boundary security headers
-  request.SetHeaders["X-Gateway-Token"] = "aitana-poc-gateway-secret-token";
+  request.SetHeaders["X-Gateway-Token"] = "project-poc-gateway-secret-token";
   request.SetHeaders["X-Enforcement-Point"] = "Tyk-APIM-Boundary";
 
   // 2. Extract and decode Bearer JWT to populate downstream identity headers
@@ -45,7 +45,7 @@ authTransformMiddleware.NewProcessRequest(function(request, session) {
           request.SetHeaders["X-User-Role"] = roleStr;
         }
       } catch (err) {
-        log("[Aitana Auth Transform] Error decoding JWT claims: " + err);
+        log("[Project Auth Transform] Error decoding JWT claims: " + err);
       }
     }
   }

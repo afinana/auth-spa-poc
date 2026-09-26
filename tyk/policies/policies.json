@@ -9,7 +9,7 @@
     "access_rights": {
       "backend-api": {
         "api_id": "backend-api",
-        "api_name": "Aitana Backend API",
+        "api_name": "Project Backend API",
         "versions": [
           "Default"
         ],

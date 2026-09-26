@@ -31,7 +31,7 @@ Kong operates at the perimeter of the architecture, sitting between the public c
                    v
 +---------------------------------------------------------------------------------+
 | Go Microservice Backend (:8080)                                                 |
-| - Validates: X-Gateway-Token == "aitana-poc-gateway-secret-token"               |
+| - Validates: X-Gateway-Token == "project-poc-gateway-secret-token"               |
 | - Validates: X-Enforcement-Point == "Kong-APIM-Boundary"                        |
 | - Resolves: X-User-Username, X-User-Email, X-User-Role                           |
 +---------------------------------------------------------------------------------+
@@ -49,7 +49,7 @@ Kong associates JWT credentials with a `consumer`. The `key` field corresponds t
 
 ```yaml
 consumers:
-  - username: aitana-client
+  - username: project-client
     jwt_secrets:
       - key: "http://localhost:8081/realms/auth-realm"
         algorithm: "RS256"
@@ -150,7 +150,7 @@ Executes custom Lua code in the `access` phase to extract token claims and const
             end
           end
         end
-        kong.service.request.set_header("X-Gateway-Token", "aitana-poc-gateway-secret-token")
+        kong.service.request.set_header("X-Gateway-Token", "project-poc-gateway-secret-token")
         kong.service.request.set_header("X-Enforcement-Point", "Kong-APIM-Boundary")
         kong.service.request.clear_header("authorization")
 ```

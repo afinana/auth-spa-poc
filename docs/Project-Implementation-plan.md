@@ -1,6 +1,6 @@
-# Implementation Plan: Aitana Auth Architecture Proof-of-Concept (PoC)
+# Implementation Plan: Project Auth Architecture Proof-of-Concept (PoC)
 
-This implementation plan defines the complete specification for the **Aitana Auth Architecture Proof-of-Concept (PoC)**. Built around a contract-first, zero-trust APIM boundary architecture, the design strictly decouples user identity verification (AuthN) from perimeter access policy enforcement (AuthZ) and downstream business logic, supporting **Keycloak** and **ZITADEL** as Identity Providers, **KrakenD**, **Kong**, and **Tyk** as Policy Enforcement Point (PEP) gateways, a downstream **Go microservice**, and an **Angular 19 SPA** with OAuth 2.0 PKCE flow.
+This implementation plan defines the complete specification for the **Project Auth Architecture Proof-of-Concept (PoC)**. Built around a contract-first, zero-trust APIM boundary architecture, the design strictly decouples user identity verification (AuthN) from perimeter access policy enforcement (AuthZ) and downstream business logic, supporting **Keycloak** and **ZITADEL** as Identity Providers, **KrakenD**, **Kong**, and **Tyk** as Policy Enforcement Point (PEP) gateways, a downstream **Go microservice**, and an **Angular 19 SPA** with OAuth 2.0 PKCE flow.
 
 ---
 
@@ -11,7 +11,7 @@ This implementation plan defines the complete specification for the **Aitana Aut
 >
 > 1. Inbound requests from the Angular SPA carry `Authorization: Bearer <JWT>` to the PEP Gateway on port `:8000`.
 > 2. The gateway cryptographically verifies the JWT signature and expiration against the IdP's public keys.
-> 3. The gateway strips the external raw `Authorization` header and injects validated identity claims (`X-User-Username`, `X-User-Email`, `X-User-Role`) alongside mandatory anti-spoofing boundary assertions (`X-Gateway-Token: aitana-poc-gateway-secret-token`, `X-Enforcement-Point: <Gateway>-APIM-Boundary`).
+> 3. The gateway strips the external raw `Authorization` header and injects validated identity claims (`X-User-Username`, `X-User-Email`, `X-User-Role`) alongside mandatory anti-spoofing boundary assertions (`X-Gateway-Token: project-poc-gateway-secret-token`, `X-Enforcement-Point: <Gateway>-APIM-Boundary`).
 > 4. The Go microservice rejects any direct requests missing or mismatched on these gateway boundary headers with `403 Forbidden`, remaining completely agnostic to OAuth/JWT mechanics.
 
 > [!NOTE]
@@ -131,7 +131,7 @@ auth-spa-poc/
 ### Component 3: Go Microservice Backend (`backend/`)
 
 - `AuthHeaderMiddleware`:
-  - Validates `X-Gateway-Token == "aitana-poc-gateway-secret-token"`
+  - Validates `X-Gateway-Token == "project-poc-gateway-secret-token"`
   - Validates `isValidEnforcementPoint(ep)` where `ep` is `Kong-APIM-Boundary`, `KrakenD-APIM-Boundary`, or `Tyk-APIM-Boundary`
   - Enforces presence of `X-User-Username` and `X-User-Email`
   - Injects `UserIdentity` struct into request context.

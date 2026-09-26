@@ -32,7 +32,7 @@ KrakenD is a stateless, high-throughput, Go-based API gateway. Unlike traditiona
                    v
 +---------------------------------------------------------------------------------+
 | Go Microservice Backend (:8080)                                                 |
-| - Validates: X-Gateway-Token == "aitana-poc-gateway-secret-token"               |
+| - Validates: X-Gateway-Token == "project-poc-gateway-secret-token"               |
 | - Validates: X-Enforcement-Point == "KrakenD-APIM-Boundary"                     |
 | - Resolves: X-User-Username, X-User-Email, X-User-Role                           |
 +---------------------------------------------------------------------------------+
@@ -49,7 +49,7 @@ KrakenD's behavior is fully configured via `krakend/krakend.json`.
 ```json
 {
   "version": 3,
-  "name": "Aitana API Gateway (KrakenD)",
+  "name": "Project API Gateway (KrakenD)",
   "port": 8000,
   "timeout": "3000ms",
   "cache_ttl": "300s",
@@ -134,7 +134,7 @@ KrakenD uses Google's Martian library (`modifier/martian`) to inject zero-trust 
               "header.Modifier": {
                 "scope": ["request"],
                 "name": "X-Gateway-Token",
-                "value": "aitana-poc-gateway-secret-token"
+                "value": "project-poc-gateway-secret-token"
               }
             },
             {

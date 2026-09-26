@@ -80,7 +80,7 @@ sequenceDiagram
 
 ### 2.4 Kong Gateway RS256 Token Verification for ZITADEL
 - Kong uses a dedicated declarative configuration (`kong/kong.zitadel.yml`).
-- Kong consumer `aitana-client` validates tokens issued by Zitadel via the public RS256 key.
+- Kong consumer `project-client` validates tokens issued by Zitadel via the public RS256 key.
 - The Lua `post-function` plugin extracts user claims (`preferred_username`, `email`, and roles from Zitadel's `urn:zitadel:iam:org:project:roles` or flat `roles`) and injects the standardized `X-User-*` headers.
 
 ---
