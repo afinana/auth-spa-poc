@@ -1,0 +1,14 @@
+# GitHub Copilot instructions and configuration
+.github/
+
+# AI assistant instruction and configuration files
+**/AGENTS.md
+**/CLAUDE.md
+**/GEMINI.md
+**/copilot-instructions.md
+**/.cursorrules
+**/.cursor/
+**/.claude/
+**/.aider*
+**/.continue/
+**/.windsurf/

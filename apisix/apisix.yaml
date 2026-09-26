@@ -1,0 +1,90 @@
+routes:
+  - id: project-api
+    uri: /api/*
+    plugins:
+      cors:
+        allow_origins: "http://localhost:4200"
+        allow_methods: "GET,POST,PUT,DELETE,OPTIONS,HEAD"
+        allow_headers: "Authorization,Content-Type,Accept,Origin,X-Requested-With"
+        expose_headers: "Content-Length,Content-Type"
+        allow_credential: true
+        max_age: 3600
+      openid-connect:
+        client_id: angular-spa
+        client_secret: unused-in-bearer-only-mode
+        discovery: http://keycloak:8080/realms/auth-realm/.well-known/openid-configuration
+        bearer_only: true
+        use_jwks: true
+        token_signing_alg_values_expected: RS256
+        claim_validator:
+          issuer:
+            valid_issuers:
+              - http://localhost:8081/realms/auth-realm
+        set_access_token_header: false
+        set_id_token_header: false
+        set_refresh_token_header: false
+        set_userinfo_header: true
+        _meta:
+          filter:
+            - ["request_method", "~=", "OPTIONS"]
+      serverless-post-function:
+        phase: access
+        functions:
+          - |
+            return function(conf, ctx)
+              local headers = ngx.req.get_headers()
+              local userinfo = headers["x-userinfo"] or headers["X-Userinfo"]
+              local decoded = type(userinfo) == "string" and ngx.decode_base64(userinfo)
+              local claims = decoded and require("cjson.safe").decode(decoded)
+              if type(claims) ~= "table" then
+                return ngx.exit(ngx.HTTP_UNAUTHORIZED)
+              end
+
+              local username = claims.preferred_username or claims.name or claims.sub
+              local email = claims.email
+              if type(username) ~= "string" or username == "" or
+                 type(email) ~= "string" or email == "" then
+                return ngx.exit(ngx.HTTP_UNAUTHORIZED)
+              end
+
+              local roles, role_set = {}, {}
+              local function add_roles(value)
+                if type(value) == "string" then
+                  if value ~= "" and not role_set[value] then
+                    table.insert(roles, value)
+                    role_set[value] = true
+                  end
+                elseif type(value) == "table" then
+                  for key, item in pairs(value) do
+                    if type(key) == "number" then
+                      add_roles(item)
+                    elseif item ~= false then
+                      add_roles(key)
+                    end
+                  end
+                end
+              end
+              add_roles(claims.roles)
+              add_roles(type(claims.realm_access) == "table" and claims.realm_access.roles)
+              add_roles(claims["urn:zitadel:iam:org:project:roles"])
+
+              ngx.req.set_header("X-User-Username", username)
+              ngx.req.set_header("X-User-Email", email)
+              ngx.req.set_header("X-User-Role", #roles > 0 and table.concat(roles, ",") or "user")
+              ngx.req.set_header("X-Gateway-Token", "project-poc-gateway-secret-token")
+              ngx.req.set_header("X-Enforcement-Point", "APISIX-APIM-Boundary")
+              ngx.req.clear_header("Authorization")
+              ngx.req.clear_header("X-Access-Token")
+              ngx.req.clear_header("X-ID-Token")
+              ngx.req.clear_header("X-Refresh-Token")
+              ngx.req.clear_header("X-Userinfo")
+            end
+        _meta:
+          filter:
+            - ["request_method", "~=", "OPTIONS"]
+    upstream:
+      type: roundrobin
+      nodes:
+        "go-backend:8080": 1
+
+#END

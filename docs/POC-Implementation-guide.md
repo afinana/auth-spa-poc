@@ -4,13 +4,13 @@
 
 &nbsp;
 
-This specification defines the production-grade Proof of Concept (PoC) enterprise software architecture for **Project Auth**. Built around a contract-first, zero-trust APIM boundary architecture, the design strictly decouples user identity verification (AuthN) from access policy enforcement (AuthZ). **Keycloak** (or ZITADEL) serves as the centralized Identity Provider (IdP), while an interchangeable Policy Enforcement Point (PEP) gateway—supporting **Kong Gateway**, **KrakenD Gateway**, or **Tyk Gateway**—enforces perimeter security. Downstream microservices, such as the Go backend, remain completely agnostic to OAuth 2.0 protocol mechanics and JWT validation logic, relying exclusively on pre-validated user contexts and boundary assertion headers.
+This specification defines the production-grade Proof of Concept (PoC) enterprise software architecture for **Project Auth**. Built around a contract-first, zero-trust APIM boundary architecture, the design strictly decouples user identity verification (AuthN) from access policy enforcement (AuthZ). **Keycloak** (or ZITADEL) serves as the centralized Identity Provider (IdP), while an interchangeable Policy Enforcement Point (PEP) gateway—supporting **Kong Gateway**, **KrakenD Gateway**, **Tyk Gateway**, or **Apache APISIX**—enforces perimeter security. Downstream microservices, such as the Go backend, remain completely agnostic to OAuth 2.0 protocol mechanics and JWT validation logic, relying exclusively on pre-validated user contexts and boundary assertion headers.
 
 &nbsp;
 
 * **AuthN Boundary (Keycloak / ZITADEL IdP):** The Angular Single Page Application (SPA) redirects unauthenticated users to the IdP using the OAuth 2.0 Authorization Code Flow with PKCE. The IdP verifies user credentials, applies client scope mappings, and issues cryptographically signed JSON Web Tokens (JWT) containing normalized identity claims (`preferred_username`, `email`, `roles`).  
 * **Request Delegation (Angular SPA):** The Angular HTTP client intercepts outgoing backend requests, attaching the JWT access token in the `Authorization: Bearer` header strictly for calls destined for the API Gateway PEP (port `8000`).  
-* **PEP Enforcement & Header Injection (Kong / KrakenD / Tyk):** The active gateway intercepts inbound requests at the perimeter, verifies JWT signatures and expirations against the IdP's public keys, strips external raw `Authorization` headers, and injects validated claims into upstream user headers (`X-User-Username`, `X-User-Email`, `X-User-Role`) along with explicit gateway anti-spoofing assertion headers (`X-Gateway-Token`, `X-Enforcement-Point`).  
+* **PEP Enforcement & Header Injection (Kong / KrakenD / Tyk / APISIX):** The active gateway intercepts inbound requests at the perimeter, verifies JWT signatures and expirations against the IdP's public keys, strips external raw `Authorization` headers, and injects validated claims into upstream user headers (`X-User-Username`, `X-User-Email`, `X-User-Role`) along with explicit gateway anti-spoofing assertion headers (`X-Gateway-Token`, `X-Enforcement-Point`).
 * **Backend Identity Resolution (Go Microservice):** The backend microservice executes middleware to validate mandatory anti-spoofing boundary headers before resolving user context from `X-User-*` headers into native request contexts, enforcing contract-first business logic and RBAC without token handling overhead.
 
 ##
@@ -164,19 +164,26 @@ The Project Auth architecture supports interchangeable Policy Enforcement Point 
 
 ---
 
-### **5.4 Comparative Evaluation Matrix: KrakenD vs. Kong vs. Tyk**
+### **5.4 Apache APISIX API Gateway (Standalone / OIDC PEP)**
 
-| Architectural Dimension | KrakenD Gateway (v2.7) | Kong Gateway (v3.6) | Tyk Gateway (v5.3) |
-|---|---|---|---|
-| **Core Engine** | Go (Lura engine) | OpenResty (Nginx + LuaJIT) | Go (Tyk Core + JSVM) |
-| **State / Storage Dependency** | None (Stateless) | None in DB-less mode | Redis required (`tyk-redis:6379`) |
-| **Configuration Format** | Declarative JSON (`krakend.json`) | Declarative YAML (`kong.yml`) | Declarative JSON (`tyk.conf`, `apps/`, `policies/`) |
-| **Token Validation Source** | Dynamic JWKS URL (`/certs`) | Public Key (PEM in `jwt_secrets`) | Base64 RSA Public Key / JWKS URL |
-| **Transformation Mechanism** | Martian modifiers & claim propagation | Lua script (`post-function`) | JSVM middleware (`auth-transform.js`) |
-| **Throughput & Latency** | Ultra-high throughput, sub-ms latency | High throughput, low latency | High throughput, low latency |
-| **Memory Footprint** | Extremely low (~25-40 MB) | Low to moderate (~60-120 MB) | Moderate (~80-150 MB + Redis) |
-| **Enforcement Point Header** | `KrakenD-APIM-Boundary` | `Kong-APIM-Boundary` | `Tyk-APIM-Boundary` |
-| **Best Fit Use Case** | Ultra-fast, stateless microservice PEP | Mature enterprise ecosystem & Lua plugins | Rich API lifecycle & headless/hybrid flexibility |
+* **Architecture:** OpenResty/Nginx with Lua plugins.
+* **Operational Mode:** File-driven standalone YAML configuration; no etcd or Admin API.
+* **Configuration:** `apisix/config.yaml` enables the required plugins and `apisix/apisix.yaml` defines the route.
+* **Token Validation:** The `openid-connect` plugin runs in bearer-only mode and validates Keycloak RS256 access tokens against discovery/JWKS, with the expected issuer explicitly configured.
+* **Header Injection:** `serverless-post-function` maps the authenticated `X-Userinfo` claims to `X-User-*`, injects the project gateway boundary values, and clears Authorization and OIDC helper headers. Preflight `OPTIONS` requests bypass authentication.
+* **Dedicated Guide:** 👉 [Apache APISIX Implementation Guide](APISIX-Implementation-Guide.md)
+
+### **5.5 Comparative Evaluation Matrix: KrakenD vs. Kong vs. Tyk vs. APISIX**
+
+| Architectural Dimension | KrakenD Gateway (v2.7) | Kong Gateway (v3.6) | Tyk Gateway (v5.3) | Apache APISIX (v3.13) |
+|---|---|---|---|---|
+| **Core Engine** | Go (Lura engine) | OpenResty (Nginx + LuaJIT) | Go (Tyk Core + JSVM) | OpenResty / Nginx + LuaJIT |
+| **State / Storage Dependency** | None (Stateless) | None in DB-less mode | Redis required (`tyk-redis:6379`) | None in file-driven standalone mode |
+| **Configuration Format** | Declarative JSON (`krakend.json`) | Declarative YAML (`kong.yml`) | Declarative JSON (`tyk.conf`, `apps/`, `policies/`) | Standalone YAML (`config.yaml`, `apisix.yaml`) |
+| **Token Validation Source** | Dynamic JWKS URL (`/certs`) | Public Key (PEM in `jwt_secrets`) | Base64 RSA Public Key / JWKS URL | OIDC discovery and JWKS |
+| **Transformation Mechanism** | Martian modifiers & claim propagation | Lua script (`post-function`) | JSVM middleware (`auth-transform.js`) | Lua (`serverless-post-function`) |
+| **Enforcement Point Header** | `KrakenD-APIM-Boundary` | `Kong-APIM-Boundary` | `Tyk-APIM-Boundary` | `APISIX-APIM-Boundary` |
+| **Best Fit Use Case** | Ultra-fast, stateless microservice PEP | Mature enterprise ecosystem & Lua plugins | Rich API lifecycle & headless/hybrid flexibility | Extensible Lua gateway with etcd-free static configuration |
 
 ---
 
@@ -252,7 +259,7 @@ export class AuthInterceptor implements HttpInterceptor {
 
 &nbsp;
 
-The Go backend remains completely agnostic to Keycloak and JWTs. It relies on standard HTTP middleware to extract the trusted headers provided by the active API Gateway (Kong, KrakenD, or Tyk).
+The Go backend remains completely agnostic to Keycloak and JWTs. It relies on standard HTTP middleware to extract the trusted headers provided by the active API Gateway (Kong, KrakenD, Tyk, or APISIX).
 
 &nbsp;
 
@@ -274,10 +281,14 @@ const (
 	ExpectedEnforcementPointKong   = "Kong-APIM-Boundary"
 	ExpectedEnforcementPointKraken = "KrakenD-APIM-Boundary"
 	ExpectedEnforcementPointTyk    = "Tyk-APIM-Boundary"
+	ExpectedEnforcementPointAPISIX = "APISIX-APIM-Boundary"
 )
 
 func isValidEnforcementPoint(ep string) bool {
-	return ep == ExpectedEnforcementPointKong || ep == ExpectedEnforcementPointKraken || ep == ExpectedEnforcementPointTyk
+	return ep == ExpectedEnforcementPointKong ||
+		ep == ExpectedEnforcementPointKraken ||
+		ep == ExpectedEnforcementPointTyk ||
+		ep == ExpectedEnforcementPointAPISIX
 }
 
 type UserIdentity struct {
@@ -294,7 +305,7 @@ func AuthHeaderMiddleware(next http.Handler) http.Handler {
 		gatewayToken := r.Header.Get("X-Gateway-Token")
 		enforcementPoint := r.Header.Get("X-Enforcement-Point")
 
-		// Validate mandatory anti-spoofing gateway headers across Kong, KrakenD, or Tyk
+		// Validate mandatory anti-spoofing gateway headers across supported gateways
 		if gatewayToken != ExpectedGatewayToken || !isValidEnforcementPoint(enforcementPoint) {
 			http.Error(w, "Forbidden: Untrusted gateway boundary", http.StatusForbidden)
 			return

@@ -1,6 +1,6 @@
 # Implementation Plan: Project Auth Architecture Proof-of-Concept (PoC)
 
-This implementation plan defines the complete specification for the **Project Auth Architecture Proof-of-Concept (PoC)**. Built around a contract-first, zero-trust APIM boundary architecture, the design strictly decouples user identity verification (AuthN) from perimeter access policy enforcement (AuthZ) and downstream business logic, supporting **Keycloak** and **ZITADEL** as Identity Providers, **KrakenD**, **Kong**, and **Tyk** as Policy Enforcement Point (PEP) gateways, a downstream **Go microservice**, and an **Angular 19 SPA** with OAuth 2.0 PKCE flow.
+This implementation plan defines the complete specification for the **Project Auth Architecture Proof-of-Concept (PoC)**. Built around a contract-first, zero-trust APIM boundary architecture, the design strictly decouples user identity verification (AuthN) from perimeter access policy enforcement (AuthZ) and downstream business logic, supporting **Keycloak** and **ZITADEL** as Identity Providers, **KrakenD**, **Kong**, **Tyk**, and **Apache APISIX** as Policy Enforcement Point (PEP) gateways, a downstream **Go microservice**, and an **Angular 19 SPA** with OAuth 2.0 PKCE flow.
 
 ---
 
@@ -18,7 +18,7 @@ This implementation plan defines the complete specification for the **Project Au
 > **Port Layout Across Stacks**:
 >
 > - **Identity Provider (IdP)**: `http://localhost:8081` (Keycloak or ZITADEL OIDC adapter)
-> - **PEP Gateway**: `http://localhost:8000` (KrakenD, Kong, or Tyk)
+> - **PEP Gateway**: `http://localhost:8000` (KrakenD, Kong, Tyk, or APISIX)
 > - **Kong Admin API**: `http://localhost:8001` (Kong stack only)
 > - **Go Microservice**: `http://localhost:8080` (Direct container port `go-backend:8080`)
 > - **Angular 19 SPA**: `http://localhost:4200`
@@ -33,6 +33,7 @@ auth-spa-poc/
 ├── docker-compose.krakend.yml      # Explicit KrakenD stack compose file
 ├── docker-compose.keycloak-kong.yml# Complete environment orchestration (Kong API GW + Keycloak IdP)
 ├── docker-compose.tyk.yml          # Complete environment orchestration (Tyk API GW + Keycloak IdP)
+├── docker-compose.apisix.yml       # Complete environment orchestration (APISIX API GW + Keycloak IdP)
 ├── docker-compose.zitadel.yml      # Complete environment orchestration (Kong API GW + ZITADEL IdP)
 ├── README.md                       # Main documentation and access guide
 ├── docs/                           # Centralized documentation and implementation guides
@@ -42,6 +43,7 @@ auth-spa-poc/
 │   ├── KONG-Implementation-Guide.md # Kong gateway deep dive
 │   ├── KRAKEND-Implementation-Guide.md # KrakenD gateway deep dive
 │   ├── TYK-Implementation-Guide.md # Tyk gateway deep dive
+│   ├── APISIX-Implementation-Guide.md # APISIX gateway deep dive
 │   └── ZITADEL-Implementation-Plan.md # ZITADEL IdP integration plan
 ├── keycloak/
 │   └── realm-export.json           # Declarative Keycloak realm export with RS256 keypair
@@ -65,6 +67,10 @@ auth-spa-poc/
 │   │   └── policies.json           # Headless security policies
 │   └── middleware/
 │       └── auth-transform.js       # JS middleware for JWT claims & header injection
+├── apisix/
+│   ├── README.md                   # APISIX configuration overview
+│   ├── config.yaml                # APISIX standalone YAML provider setup
+│   └── apisix.yaml                # API route and Keycloak OIDC policy
 ├── backend/
 │   ├── README.md                   # Backend architecture, zero-trust headers & RBAC guide
 │   ├── go.mod                      # Go module definition
@@ -125,6 +131,10 @@ auth-spa-poc/
    - File-based API definitions (`apps/app-backend.json`) and security policies (`policies/policies.json`)
    - RS256 JWT validation using Base64 RSA public key
    - JSVM middleware (`auth-transform.js`) injecting `X-Gateway-Token` and `X-Enforcement-Point: Tyk-APIM-Boundary`.
+4. **Apache APISIX Gateway (`apisix/`)**:
+   - File-driven standalone data plane on port `8000`, without etcd or an Admin API.
+   - OIDC bearer-only plugin validating Keycloak tokens using discovery/JWKS and an issuer allowlist.
+   - Lua `serverless-post-function` mapping authenticated claims, replacing trusted headers, and clearing token headers.
 
 ---
 
@@ -132,14 +142,14 @@ auth-spa-poc/
 
 - `AuthHeaderMiddleware`:
   - Validates `X-Gateway-Token == "project-poc-gateway-secret-token"`
-  - Validates `isValidEnforcementPoint(ep)` where `ep` is `Kong-APIM-Boundary`, `KrakenD-APIM-Boundary`, or `Tyk-APIM-Boundary`
+  - Validates `isValidEnforcementPoint(ep)` for the configured Kong, KrakenD, Tyk, and APISIX boundary identifiers
   - Enforces presence of `X-User-Username` and `X-User-Email`
   - Injects `UserIdentity` struct into request context.
 - Handlers:
   - `ProfileHandler`: returns user identity and boundary metadata
   - `AdminHandler`: enforces `admin` role check
   - `HealthHandler`: returns `200 OK` liveness.
-- Test suite (`main_test.go`): verifies 403 when boundary headers are missing, 401 when user context is missing, 200 for valid calls across Kong, KrakenD, and Tyk, and 403/200 for RBAC checks.
+- Test suite (`main_test.go`): verifies 403 when boundary headers are missing, 401 when user context is missing, 200 for valid calls through each supported gateway boundary, and 403/200 for RBAC checks.
 
 ---
 
@@ -170,6 +180,9 @@ docker compose -f docker-compose.keycloak-kong.yml up -d
 
 # Tyk
 docker compose -f docker-compose.tyk.yml up -d
+
+# APISIX
+docker compose -f docker-compose.apisix.yml up -d
 
 # ZITADEL
 docker compose -f docker-compose.zitadel.yml up -d

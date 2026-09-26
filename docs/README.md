@@ -13,6 +13,7 @@ This directory contains the in-depth architectural guides, comparative benchmark
 | **[Kong Implementation Guide](KONG-Implementation-Guide.md)** | Gateway PEP Deep Dive | Kong (v3.6) + Keycloak / ZITADEL | Declarative DB-less setup, JWT plugin, Lua claim transformation (`post-function`), anti-spoofing injection, Admin API. |
 | **[KrakenD Implementation Guide](KRAKEND-Implementation-Guide.md)** | Gateway PEP Deep Dive | KrakenD (v2.7) + Keycloak / ZITADEL | Stateless Lura Go engine, dynamic JWKS caching (`auth/validator`), Martian request modifiers, ultra-low latency. |
 | **[Tyk Implementation Guide](TYK-Implementation-Guide.md)** | Gateway PEP Deep Dive | Tyk (v5.3+) + Keycloak | Headless OSS setup, Redis session storage, RS256 JWT validation, JavaScript Virtual Machine (JSVM) middleware. |
+| **[APISIX Implementation Guide](APISIX-Implementation-Guide.md)** | Gateway PEP Deep Dive | Apache APISIX (v3.13) + Keycloak | Standalone YAML configuration, OIDC/JWKS validation, Lua claim mapping, and trusted boundary headers. |
 | **[ZITADEL Implementation Plan](ZITADEL-Implementation-Plan.md)** | IdP Integration Plan | ZITADEL (v2.x) | Cloud-native multi-tenancy, dynamic key sync bootstrap, and comparative analysis vs. Keycloak. |
 
 ---
@@ -30,7 +31,7 @@ The core pattern implemented across this repository enforces a **Zero-Trust Back
          │
          │  2. RS256 Access Token (JWT)
          ▼
-[ API Gateway PEP (Port 8000: Kong / KrakenD / Tyk) ]
+[ API Gateway PEP (Port 8000: Kong / KrakenD / Tyk / APISIX) ]
          │
          │  3. Validates Signature & Injects Secure Headers
          │     - X-Gateway-Token: project-poc-gateway-secret-token
@@ -51,6 +52,7 @@ The core pattern implemented across this repository enforces a **Zero-Trust Back
 | **KrakenD** | Keycloak | `docker-compose.krakend.yml` | `docker compose -f docker-compose.krakend.yml up -d` |
 | **Kong** | Keycloak | `docker-compose.keycloak-kong.yml` | `docker compose -f docker-compose.keycloak-kong.yml up -d` |
 | **Tyk** | Keycloak | `docker-compose.tyk.yml` | `docker compose -f docker-compose.tyk.yml up -d` |
+| **APISIX** | Keycloak | `docker-compose.apisix.yml` | `docker compose -f docker-compose.apisix.yml up -d` |
 | **Kong** | ZITADEL | `docker-compose.zitadel.yml` | `docker compose -f docker-compose.zitadel.yml up -d` |
 
 ---
@@ -62,3 +64,4 @@ The core pattern implemented across this repository enforces a **Zero-Trust Back
 - 🦍 **[Kong Configuration Directory](../kong/README.md)**: DB-less declarative configurations (`kong.yml`, `kong.zitadel.yml`).
 - 🐙 **[KrakenD Configuration Directory](../krakend/README.md)**: Declarative gateway definitions (`krakend.json`, `krakend.zitadel.json`).
 - 🛡️ **[Tyk Configuration Directory](../tyk/README.md)**: Headless configuration, JSVM middleware, apps, and policies.
+- 🌐 **[APISIX Configuration Directory](../apisix/README.md)**: Standalone YAML deployment and OIDC-based request transformation.

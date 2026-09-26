@@ -1,6 +1,6 @@
 # Auth Architecture Proof-of-Concept (PoC)
 
-A contract-first, zero-trust APIM boundary architecture demonstrating the strict decoupling of user identity verification (**Keycloak** or **ZITADEL** IdP) from perimeter policy enforcement (**KrakenD**, **Kong**, or **Tyk** API Gateway PEP) and downstream business logic (**Go Microservice**), consumed by a modern **Angular 19 SPA**.
+A contract-first, zero-trust APIM boundary architecture demonstrating the strict decoupling of user identity verification (**Keycloak** or **ZITADEL** IdP) from perimeter policy enforcement (**KrakenD**, **Kong**, **Tyk**, or **Apache APISIX** API Gateway PEP) and downstream business logic (**Go Microservice**), consumed by a modern **Angular 19 SPA**.
 
 ---
 
@@ -36,11 +36,11 @@ sequenceDiagram
 - **Authorization Code Flow with PKCE**:
   Single Page Applications (SPAs) are public clients unable to securely store secrets. The Authorization Code Flow with Proof Key for Code Exchange (PKCE) guarantees code exchange integrity directly within the browser without client secrets.
 - **Token Offloading (PEP Gateway Boundary)**:
-  The gateway (**KrakenD**, **Kong**, or **Tyk**) operates as the perimeter Policy Enforcement Point (PEP). It offloads JWT verification, signature checking, and key validation from upstream services, stripping the raw `Authorization` header so downstream services never handle tokens.
+  The gateway (**KrakenD**, **Kong**, **Tyk**, or **Apache APISIX**) operates as the perimeter Policy Enforcement Point (PEP). It offloads JWT verification, signature checking, and key validation from upstream services, stripping the raw `Authorization` header so downstream services never handle tokens.
 - **Trusted Header Injection & Anti-Spoofing Guardrails**:
   The gateway injects verified identity claims (`X-User-Username`, `X-User-Email`, `X-User-Role`) alongside boundary assertion headers:
   - `X-Gateway-Token: poc-gateway-secret-token`
-  - `X-Enforcement-Point`: `KrakenD-APIM-Boundary`, `Kong-APIM-Boundary`, or `Tyk-APIM-Boundary`
+  - `X-Enforcement-Point`: a gateway-specific identifier (`KrakenD-APIM-Boundary`, `Kong-APIM-Boundary`, `Tyk-APIM-Boundary`, or `APISIX-APIM-Boundary`)
 - **Zero-Trust Microservice Defense-in-Depth**:
   Downstream microservices remain completely decoupled from OAuth/OIDC mechanics. The Go backend's `AuthHeaderMiddleware` validates the presence and authenticity of boundary assertion headers before allowing requests through, rejecting unverified or bypassed requests with **HTTP 403 Forbidden**.
 
@@ -58,6 +58,7 @@ sequenceDiagram
 | **Kong Gateway** | Admin REST API | [http://localhost:8001](http://localhost:8001) | *None* | *None* | Declarative status & route inspection |
 | **KrakenD Gateway** | Health / Config | [http://localhost:8000/__health](http://localhost:8000/__health) | *None* | *None* | Stateless engine ([KrakenD Designer GUI](https://designer.krakend.io/)) |
 | **Tyk Gateway** | Gateway API | [http://localhost:8000/hello](http://localhost:8000/hello) | *None* | `tyk-secret-key-352d20ee67be` | Headless mode (via `x-tyk-authorization`) |
+| **Apache APISIX Gateway** | HTTP Proxy | [http://localhost:8000](http://localhost:8000) | *None* | *None* | Standalone, file-driven mode (no Admin API or etcd) |
 | **Keycloak DB** | PostgreSQL | `localhost:5432` (`postgres:5432`) | `keycloak` | `keycloak_pass` | Keycloak persistence database (`keycloak`) |
 | **ZITADEL DB** | PostgreSQL | `localhost:5432` (`zitadel-postgres:5432`) | `zitadel` | `zitadel_pass` | ZITADEL persistence database (`zitadel`) |
 
@@ -102,7 +103,7 @@ Manage organizations, projects, applications, and users at [http://localhost:808
 
 ---
 
-### 2.5 API Gateways (KrakenD, Kong & Tyk PEP) & Boundary Tokens
+### 2.5 API Gateways (KrakenD, Kong, Tyk & APISIX PEP) & Boundary Tokens
 
 | Parameter | Setting / Value | Description |
 |---|---|---|
@@ -113,10 +114,12 @@ Manage organizations, projects, applications, and users at [http://localhost:808
 | **Tyk Proxy Endpoint** | `http://localhost:8000` | Tyk gateway entrypoint for API calls |
 | **Tyk Health / Hello Check** | `http://localhost:8000/hello` | Gateway liveness endpoint |
 | **Tyk Gateway Secret** | `tyk-secret-key-352d20ee67be` | Tyk API header secret (`x-tyk-authorization`) |
-| **Boundary Gateway Secret** | `poc-gateway-secret-token` | Injected as `X-Gateway-Token`, validated by Go microservice |
+| **APISIX Proxy Endpoint** | `http://localhost:8000` | Apache APISIX standalone gateway entrypoint |
+| **Boundary Gateway Secret** | `project-poc-gateway-secret-token` | Injected as `X-Gateway-Token`, validated by Go microservice |
 | **KrakenD Enforcement Point**| `KrakenD-APIM-Boundary` | Injected as `X-Enforcement-Point` by KrakenD, validated by Go microservice |
 | **Kong Enforcement Point** | `Kong-APIM-Boundary` | Injected as `X-Enforcement-Point` by Kong, validated by Go microservice |
 | **Tyk Enforcement Point** | `Tyk-APIM-Boundary` | Injected as `X-Enforcement-Point` by Tyk, validated by Go microservice |
+| **APISIX Enforcement Point** | `APISIX-APIM-Boundary` | Injected as `X-Enforcement-Point` by APISIX, validated by Go microservice |
 
 ---
 
@@ -138,6 +141,7 @@ For in-depth specifications, architectural internals, gateway comparison, and mo
 - 🦍 **[Kong Implementation Guide](docs/KONG-Implementation-Guide.md)**: Declarative DB-less setup, JWT plugin, Lua claim transformation (`post-function`), anti-spoofing injection, and Kong Admin API.
 - 🐙 **[KrakenD Implementation Guide](docs/KRAKEND-Implementation-Guide.md)**: Stateless Lura Go engine, dynamic JWKS caching (`auth/validator`), Martian request modifiers, and ultra-high-throughput routing.
 - 🛡️ **[Tyk Implementation Guide](docs/TYK-Implementation-Guide.md)**: Headless open-source setup, Redis session storage, RS256 JWT validation, and JavaScript Virtual Machine (JSVM) middleware.
+- 🌐 **[Apache APISIX Implementation Guide](docs/APISIX-Implementation-Guide.md)**: Standalone YAML mode, OIDC/JWKS token validation, Lua claim mapping, and trusted-header injection.
 
 ### 3.2 System Architecture & Component Guides
 
@@ -158,6 +162,7 @@ auth-spa-poc/
 ├── docker-compose.krakend.yml      # Explicit KrakenD stack compose file
 ├── docker-compose.keycloak-kong.yml# Complete environment orchestration (Kong API GW + Keycloak IdP)
 ├── docker-compose.tyk.yml          # Complete environment orchestration (Tyk API GW + Keycloak IdP)
+├── docker-compose.apisix.yml       # Complete environment orchestration (APISIX API GW + Keycloak IdP)
 ├── docker-compose.zitadel.yml      # Complete environment orchestration (Kong API GW + ZITADEL IdP)
 ├── README.md                       # Main documentation and access guide
 ├── docs/                           # Centralized documentation and implementation guides
@@ -167,6 +172,7 @@ auth-spa-poc/
 │   ├── KONG-Implementation-Guide.md # Kong gateway deep dive
 │   ├── KRAKEND-Implementation-Guide.md # KrakenD gateway deep dive
 │   ├── TYK-Implementation-Guide.md # Tyk gateway deep dive
+│   ├── APISIX-Implementation-Guide.md # APISIX gateway deep dive
 │   └── ZITADEL-Implementation-Plan.md # ZITADEL IdP integration plan
 ├── README.md                       # Main documentation and access guide
 ├── keycloak/
@@ -191,6 +197,10 @@ auth-spa-poc/
 │   │   └── policies.json           # Headless security policies
 │   └── middleware/
 │       └── auth-transform.js       # JS middleware for JWT claims & header injection
+├── apisix/
+│   ├── README.md                   # APISIX configuration overview
+│   ├── config.yaml                # Standalone deployment configuration
+│   └── apisix.yaml                # Routes, OIDC validation, and header transformation
 ├── backend/
 │   ├── README.md                   # 📖 Backend architecture, zero-trust headers & RBAC guide
 │   ├── go.mod                      # Go module definition
@@ -230,6 +240,7 @@ All stacks expose the same external ports (`:4200` for SPA, `:8000` for PEP Gate
 | **KrakenD + Keycloak** *(Default)* | Keycloak (`:8081`) | KrakenD (`:8000`) | PostgreSQL | `docker compose up -d` |
 | **Kong + Keycloak** | Keycloak (`:8081`) | Kong (`:8000`, `:8001`) | PostgreSQL | `docker compose -f docker-compose.keycloak-kong.yml up -d` |
 | **Tyk + Keycloak** | Keycloak (`:8081`) | Tyk (`:8000`) | PostgreSQL + Redis | `docker compose -f docker-compose.tyk.yml up -d` |
+| **APISIX + Keycloak** | Keycloak (`:8081`) | APISIX (`:8000`) | PostgreSQL | `docker compose -f docker-compose.apisix.yml up -d` |
 | **Kong + ZITADEL** | ZITADEL (`:8081`) | Kong (`:8000`, `:8001`) | ZITADEL PostgreSQL | `docker compose -f docker-compose.zitadel.yml up -d` |
 
 ---
@@ -287,7 +298,23 @@ docker compose -f docker-compose.tyk.yml down
 
 ---
 
-### 5.5 Starting the ZITADEL + Kong Stack
+### 5.5 Starting the Keycloak + APISIX Stack
+
+```bash
+# 1. Stop current stack if running
+docker compose down
+
+# 2. Launch Keycloak + APISIX stack
+docker compose -f docker-compose.apisix.yml up -d
+
+# 3. Check running services
+docker compose -f docker-compose.apisix.yml ps
+
+# 4. Stop
+docker compose -f docker-compose.apisix.yml down
+```
+
+### 5.6 Starting the ZITADEL + Kong Stack
 
 ```bash
 # 1. Ensure other stacks are stopped
@@ -389,7 +416,7 @@ cd backend && go test -v ./...
 ## 7. Troubleshooting & FAQ Guide
 
 ### 7.1 Port Conflicts (`8000`, `8080`, `8081`, `4200`)
-All 4 stacks map the same host ports. If starting a new stack fails with `bind: address already in use`:
+All gateway stacks map the same host ports. If starting a new stack fails with `bind: address already in use`:
 ```bash
 # Identify and stop any running compose stacks
 docker compose down
@@ -397,6 +424,7 @@ docker compose -f docker-compose.krakend.yml down
 docker compose -f docker-compose.keycloak-kong.yml down
 docker compose -f docker-compose.tyk.yml down
 docker compose -f docker-compose.zitadel.yml down
+docker compose -f docker-compose.apisix.yml down
 ```
 
 ### 7.2 Keycloak Realm Import & Clean Slate Reset
@@ -428,5 +456,11 @@ If you switch gateways and notice persistent preflight errors in the browser, cl
 
 When deploying to Kubernetes (K3s, EKS, GKE), internal network isolation is enforced through network policies:
 - Microservices are exposed exclusively via **ClusterIP** (never NodePort or LoadBalancer).
-- A Kubernetes `NetworkPolicy` explicitly permits TCP ingress to port 8080 **only** from pods bearing the PEP gateway label (`app: krakend`, `app: kong`, or `app: tyk`).
+- A Kubernetes `NetworkPolicy` explicitly permits TCP ingress to port 8080 **only** from pods bearing the PEP gateway label (`app: krakend`, `app: kong`, `app: tyk`, or `app: apisix`).
 - Direct traffic attempts from other pods or external ingress are dropped at the network layer, preventing header spoofing and perimeter bypass attacks.
+
+---
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 only. See [LICENSE](LICENSE) for the full license text.

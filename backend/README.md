@@ -6,7 +6,7 @@ This Go microservice (`go-backend`) serves as the upstream protected resource wi
 
 ## 1. Architecture & Policy Enforcement Point (PEP) Flow
 
-Rather than having every microservice independently validate JWT cryptographic signatures, the architecture decouples validation at the **Kong API Gateway (PEP)** and enforces strict boundary verification at the microservice:
+Rather than having every microservice independently validate JWT cryptographic signatures, the active API gateway (Kong, KrakenD, Tyk, or APISIX) validates the token and the microservice enforces the shared trusted-boundary contract:
 
 ```
 [Client / Angular SPA]
@@ -14,7 +14,7 @@ Rather than having every microservice independently validate JWT cryptographic s
           │ 1. Request with "Authorization: Bearer <JWT>"
           ▼
 ┌────────────────────────────────────────────────────────┐
-│ Kong API Gateway (PEP - Port 8000)                    │
+│ API Gateway PEP (Port 8000)                           │
 │  - Cryptographically verifies JWT via Keycloak JWKS   │
 │  - Unpacks claims (username, email, roles)             │
 │  - Strips original "Authorization" header              │
@@ -38,24 +38,24 @@ Direct Client Bypass to Port 8080:
 
 ## 2. Zero-Trust Boundary & Header Contract
 
-The microservice never accepts unverified requests. Upstream requests forwarded by Kong must satisfy the following contract:
+The microservice never accepts unverified requests. Requests forwarded by a supported gateway must satisfy the following contract:
 
 ### Gateway Security Headers (Anti-Spoofing)
 | Header | Expected Value | Purpose |
 | :--- | :--- | :--- |
 | `X-Gateway-Token` | `project-poc-gateway-secret-token` | Proves request passed through the authenticated gateway boundary |
-| `X-Enforcement-Point` | `Kong-APIM-Boundary` | Confirms PEP origin |
+| `X-Enforcement-Point` | Gateway-specific boundary identifier | Confirms PEP origin |
 
 If either header is missing or incorrect, `AuthHeaderMiddleware` logs a security warning and immediately returns **`403 Forbidden: Untrusted gateway boundary`**.
 
 ### User Identity Headers
-Kong’s `post-function` Lua plugin decodes the verified JWT and maps claims to downstream headers:
+Gateway-specific claim transformation maps verified JWT claims to downstream headers. APISIX uses its OIDC plugin and a Lua post-function; Kong uses its JWT plugin and Lua post-function.
 
 | Injected Header | Source JWT Claim | Example Value |
 | :--- | :--- | :--- |
-| `X-User-Username` | `preferred_username` or `sub` | `alice`, `bob` |
+| `X-User-Username` | `preferred_username`, `name`, or `sub` | `alice`, `bob` |
 | `X-User-Email` | `email` | `alice@example.com` |
-| `X-User-Role` | `roles` or `realm_access.roles` | `user` or `admin,user` |
+| `X-User-Role` | `roles`, `realm_access.roles`, or ZITADEL project roles | `user` or `admin,user` |
 
 If identity headers (`X-User-Username` or `X-User-Email`) are missing, the middleware returns **`401 Unauthorized: Missing user context`**.
 
@@ -159,6 +159,7 @@ curl -i -H "Authorization: Bearer $BOB_TOKEN" http://localhost:8000/api/admin
 - [`main_test.go`](main_test.go): Comprehensive unit tests validating security boundary controls and RBAC.
 - [`Dockerfile.backend`](Dockerfile.backend): Multi-stage container build producing a lightweight Alpine production image.
 - [`../kong/kong.yml`](../kong/kong.yml): Kong configuration containing the `jwt` validation plugin and Lua `post-function` mapping claims to headers.
+- [`../apisix/apisix.yaml`](../apisix/apisix.yaml): APISIX Keycloak OIDC/JWKS validation, claim mapping, CORS, and boundary header configuration.
 
 ---
 

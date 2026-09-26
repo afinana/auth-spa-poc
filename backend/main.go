@@ -20,13 +20,16 @@ const (
 	ExpectedEnforcementPointKong   = "Kong-APIM-Boundary"
 	ExpectedEnforcementPointKraken = "KrakenD-APIM-Boundary"
 	ExpectedEnforcementPointTyk    = "Tyk-APIM-Boundary"
+	ExpectedEnforcementPointAPISIX = "APISIX-APIM-Boundary"
 	ExpectedEnforcementPoint       = ExpectedEnforcementPointKong
 )
 
 func isValidEnforcementPoint(ep string) bool {
-	return ep == ExpectedEnforcementPointKong || ep == ExpectedEnforcementPointKraken || ep == ExpectedEnforcementPointTyk
+	return ep == ExpectedEnforcementPointKong ||
+		ep == ExpectedEnforcementPointKraken ||
+		ep == ExpectedEnforcementPointTyk ||
+		ep == ExpectedEnforcementPointAPISIX
 }
-
 
 type UserIdentity struct {
 	Username         string `json:"username"`

@@ -191,4 +191,29 @@ func TestProfileHandler_Tyk_Success(t *testing.T) {
 	}
 }
 
+func TestProfileHandler_APISIX_Success(t *testing.T) {
+	handler := SetupRoutes()
 
+	req := httptest.NewRequest(http.MethodGet, "/api/profile", nil)
+	req.Header.Set("X-Gateway-Token", ExpectedGatewayToken)
+	req.Header.Set("X-Enforcement-Point", ExpectedEnforcementPointAPISIX)
+	req.Header.Set("X-User-Username", "alice")
+	req.Header.Set("X-User-Email", "alice@example.com")
+	req.Header.Set("X-User-Role", "user")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d. Body: %s", http.StatusOK, rec.Code, rec.Body.String())
+	}
+
+	var resp ProfileResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode JSON response: %v", err)
+	}
+
+	if resp.User.EnforcementPoint != ExpectedEnforcementPointAPISIX {
+		t.Fatalf("expected enforcement point %s, got %s", ExpectedEnforcementPointAPISIX, resp.User.EnforcementPoint)
+	}
+}
