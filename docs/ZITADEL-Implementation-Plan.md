@@ -6,7 +6,7 @@ This implementation plan details the architecture, configuration, and deployment
 
 ## 1. Context & Architectural Overview
 
-The Aitana Auth Architecture PoC demonstrates the strict decoupling of user identity verification (IdP) from policy enforcement (Kong PEP Gateway) and business logic (Go Microservice).
+The Project Auth Architecture PoC demonstrates the strict decoupling of user identity verification (IdP) from policy enforcement (Kong PEP Gateway) and business logic (Go Microservice).
 
 Both solutions (**Keycloak** and **ZITADEL**) share the same HTTP ports and network contracts, as they are **not intended to run at the same time**:
 
