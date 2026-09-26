@@ -1,6 +1,6 @@
 # KrakenD API Gateway Implementation Guide
 
-This guide provides a comprehensive technical specification of **KrakenD Gateway (v2.7)** deployed as the perimeter Policy Enforcement Point (PEP) in the Aitana Auth Architecture. It details stateless declarative configuration, dynamic JWKS token validation, claim propagation, Martian header injection, and ultra-high-performance routing.
+This guide provides a comprehensive technical specification of **KrakenD Gateway (v2.7)** deployed as the perimeter Policy Enforcement Point (PEP) in the Project Auth Architecture. It details stateless declarative configuration, dynamic JWKS token validation, claim propagation, Martian header injection, and ultra-high-performance routing.
 
 ---
 
