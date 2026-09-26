@@ -1,6 +1,6 @@
 # Kong API Gateway Implementation Guide
 
-This guide provides a comprehensive technical specification of **Kong Gateway (v3.6)** deployed as the perimeter Policy Enforcement Point (PEP) in the Aitana Auth Architecture. It details declarative DB-less mode, JWT validation, custom Lua post-functions for claim extraction, and anti-spoofing header injection.
+This guide provides a comprehensive technical specification of **Kong Gateway (v3.6)** deployed as the perimeter Policy Enforcement Point (PEP) in the Project Auth Architecture. It details declarative DB-less mode, JWT validation, custom Lua post-functions for claim extraction, and anti-spoofing header injection.
 
 ---
 
